@@ -1,0 +1,2428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GUNDAM 汉语 QUIZ — Mobile Suit Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gundam-white: #E8E8EC;
+    --gundam-red: #D12B2B;
+    --gundam-red-glow: #FF4444;
+    --gundam-blue: #2255AA;
+    --gundam-blue-light: #3377DD;
+    --gundam-yellow: #E8B830;
+    --gundam-yellow-glow: #FFD044;
+    --hull-dark: #1A1C24;
+    --hull-mid: #252833;
+    --hull-light: #333744;
+    --hull-edge: #3A3F50;
+    --hud-green: #00FF88;
+    --hud-green-dim: #00CC66;
+    --hud-cyan: #00D4FF;
+    --hud-cyan-dim: rgba(0,212,255,0.3);
+    --hud-red: #FF3344;
+    --hud-amber: #FFAA22;
+    --text-main: #C8CCD8;
+    --text-bright: #EEEEF2;
+    --panel-bg: rgba(30,33,44,0.92);
+    --panel-border: rgba(0,212,255,0.2);
+    --radius: 4px;
+    --radius-lg: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Rajdhani', sans-serif;
+    background: var(--hull-dark);
+    color: var(--text-main);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Starfield background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 65%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 40%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 80%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 90%, rgba(255,255,255,0.2) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 15%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 40% 50%, rgba(0,212,255,0.3) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 60% 75%, rgba(0,255,136,0.2) 0%, transparent 100%),
+      radial-gradient(1px 1px at 25% 35%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 75% 55%, rgba(255,255,255,0.2) 0%, transparent 100%),
+      radial-gradient(1px 1px at 55% 85%, rgba(255,255,255,0.4) 0%, transparent 100%);
+    z-index: 0;
+  }
+
+  /* HUD scan lines */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 2px,
+      rgba(0,212,255,0.015) 2px,
+      rgba(0,212,255,0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* Animated HUD lines */
+  .hud-line-top, .hud-line-bottom {
+    position: fixed;
+    left: 0; right: 0;
+    height: 2px;
+    z-index: 10;
+  }
+  .hud-line-top {
+    top: 0;
+    background: linear-gradient(90deg, transparent 0%, var(--hud-cyan) 20%, var(--hud-cyan) 80%, transparent 100%);
+    opacity: 0.4;
+  }
+  .hud-line-bottom {
+    bottom: 0;
+    background: linear-gradient(90deg, transparent 0%, var(--gundam-red-glow) 20%, var(--gundam-red-glow) 80%, transparent 100%);
+    opacity: 0.3;
+  }
+
+  /* Corner HUD decorations */
+  .hud-corner {
+    position: fixed;
+    width: 60px; height: 60px;
+    z-index: 10;
+    opacity: 0.25;
+  }
+  .hud-corner::before, .hud-corner::after {
+    content: '';
+    position: absolute;
+    background: var(--hud-cyan);
+  }
+  .hud-corner-tl { top: 12px; left: 12px; }
+  .hud-corner-tl::before { width: 30px; height: 2px; top: 0; left: 0; }
+  .hud-corner-tl::after { width: 2px; height: 30px; top: 0; left: 0; }
+  .hud-corner-tr { top: 12px; right: 12px; }
+  .hud-corner-tr::before { width: 30px; height: 2px; top: 0; right: 0; }
+  .hud-corner-tr::after { width: 2px; height: 30px; top: 0; right: 0; }
+  .hud-corner-bl { bottom: 12px; left: 12px; }
+  .hud-corner-bl::before { width: 30px; height: 2px; bottom: 0; left: 0; }
+  .hud-corner-bl::after { width: 2px; height: 30px; bottom: 0; left: 0; }
+  .hud-corner-br { bottom: 12px; right: 12px; }
+  .hud-corner-br::before { width: 30px; height: 2px; bottom: 0; right: 0; }
+  .hud-corner-br::after { width: 2px; height: 30px; bottom: 0; right: 0; }
+
+  /* Side HUD text */
+  .hud-side-text {
+    position: fixed;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.5rem;
+    color: var(--hud-cyan);
+    opacity: 0.2;
+    letter-spacing: 3px;
+    writing-mode: vertical-rl;
+    z-index: 10;
+  }
+  .hud-side-left { left: 16px; top: 50%; transform: translateY(-50%); }
+  .hud-side-right { right: 16px; top: 50%; transform: translateY(-50%) rotate(180deg); }
+
+  .app {
+    position: relative;
+    z-index: 2;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 24px 32px 32px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 28px;
+    animation: hudFlicker 0.8s ease;
+    flex-shrink: 0;
+  }
+  .header-badge {
+    display: inline-block;
+    padding: 6px 20px;
+    border: 1px solid var(--hud-cyan-dim);
+    border-radius: 2px;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.65rem;
+    color: var(--hud-cyan);
+    letter-spacing: 4px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    background: rgba(0,212,255,0.05);
+  }
+  .header h1 {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 2.5rem;
+    color: var(--gundam-white);
+    letter-spacing: 8px;
+    line-height: 1.3;
+    text-transform: uppercase;
+  }
+  .header h1 .kanji {
+    font-family: 'Noto Sans SC', sans-serif;
+    color: var(--gundam-red-glow);
+    font-size: 3.2rem;
+    text-shadow: 0 0 20px rgba(209,43,43,0.4);
+  }
+  .header h1 .sub {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--hud-cyan);
+    letter-spacing: 8px;
+    margin-top: 4px;
+    font-weight: 600;
+  }
+  .header p {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem;
+    color: rgba(200,204,216,0.4);
+    margin-top: 8px;
+    letter-spacing: 2px;
+  }
+
+  /* Gundam tri-color stripe */
+  .tri-stripe {
+    display: flex;
+    height: 3px;
+    margin: 16px auto;
+    max-width: 200px;
+    gap: 3px;
+  }
+  .tri-stripe span {
+    flex: 1;
+    border-radius: 1px;
+  }
+  .tri-stripe .s-red { background: var(--gundam-red); }
+  .tri-stripe .s-white { background: var(--gundam-white); }
+  .tri-stripe .s-blue { background: var(--gundam-blue-light); }
+  .tri-stripe .s-yellow { background: var(--gundam-yellow); }
+
+  /* Mode Selector */
+  .mode-selector {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 32px;
+    animation: slideUp 0.5s ease 0.1s both;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 28px 12px;
+    border: 1px solid var(--hull-edge);
+    border-radius: var(--radius);
+    background: var(--hull-mid);
+    cursor: pointer;
+    font-family: 'Orbitron', monospace;
+    font-weight: 600;
+    font-size: 0.7rem;
+    color: var(--text-main);
+    transition: all 0.2s ease;
+    text-align: center;
+    line-height: 1.6;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+    text-transform: uppercase;
+  }
+  .mode-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: transparent;
+    transition: background 0.2s ease;
+  }
+  .mode-btn:hover {
+    border-color: var(--hud-cyan-dim);
+    background: var(--hull-light);
+  }
+  .mode-btn:hover::before {
+    background: var(--hud-cyan);
+  }
+  .mode-btn.active {
+    border-color: var(--gundam-red);
+    background: linear-gradient(180deg, rgba(209,43,43,0.15) 0%, var(--hull-mid) 100%);
+    color: var(--gundam-white);
+    box-shadow: 0 0 20px rgba(209,43,43,0.15), inset 0 0 20px rgba(209,43,43,0.05);
+  }
+  .mode-btn.active::before {
+    background: var(--gundam-red);
+    box-shadow: 0 0 10px rgba(209,43,43,0.5);
+  }
+  .mode-btn .mode-icon {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 10px;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+  }
+
+  /* Stats Bar */
+  .stats-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    padding: 22px 32px;
+    background: var(--panel-bg);
+    border-radius: var(--radius);
+    border: 1px solid var(--panel-border);
+    position: relative;
+    animation: slideUp 0.5s ease 0.2s both;
+  }
+  .stats-bar::before {
+    content: 'COMBAT DATA';
+    position: absolute;
+    top: -8px; left: 16px;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.5rem;
+    color: var(--hud-cyan);
+    letter-spacing: 2px;
+    background: var(--hull-dark);
+    padding: 0 8px;
+  }
+  .stat { text-align: center; }
+  .stat-value {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 1.9rem;
+  }
+  .stat-value.score { color: var(--gundam-yellow-glow); text-shadow: 0 0 10px rgba(232,184,48,0.3); }
+  .stat-value.streak { color: var(--gundam-red-glow); text-shadow: 0 0 10px rgba(255,68,68,0.3); }
+  .stat-value.progress { color: var(--hud-cyan); text-shadow: 0 0 10px rgba(0,212,255,0.3); }
+  .stat-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.55rem;
+    color: rgba(200,204,216,0.4);
+    margin-top: 6px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* Progress bar — energy gauge */
+  .progress-track {
+    height: 14px;
+    background: var(--hull-mid);
+    border-radius: 2px;
+    margin-bottom: 28px;
+    overflow: hidden;
+    border: 1px solid var(--hull-edge);
+    position: relative;
+    animation: slideUp 0.5s ease 0.25s both;
+  }
+  .progress-track::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 18px,
+      rgba(0,0,0,0.3) 18px,
+      rgba(0,0,0,0.3) 20px
+    );
+    z-index: 1;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--hud-green-dim), var(--hud-green));
+    border-radius: 1px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 0%;
+    box-shadow: 0 0 8px rgba(0,255,136,0.3);
+  }
+
+  /* Question Card */
+  .question-card {
+    background: var(--panel-bg);
+    border-radius: var(--radius-lg);
+    padding: 52px 36px 44px;
+    text-align: center;
+    border: 1px solid var(--panel-border);
+    margin-bottom: 24px;
+    position: relative;
+    animation: panelSlide 0.35s ease;
+    clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+  }
+  .question-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--gundam-red), var(--gundam-yellow), var(--gundam-blue-light));
+  }
+  .question-card::after {
+    content: '';
+    position: absolute;
+    top: 20px; right: 0;
+    width: 2px; height: calc(100% - 20px);
+    background: linear-gradient(180deg, var(--hud-cyan-dim), transparent);
+  }
+
+  /* Corner cut indicator */
+  .card-corner {
+    position: absolute;
+    top: 8px; right: 28px;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.5rem;
+    color: var(--hud-cyan);
+    opacity: 0.4;
+    letter-spacing: 1px;
+  }
+
+  .q-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 3px;
+    color: var(--hud-cyan);
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+  .q-word {
+    font-family: 'Noto Sans SC', sans-serif;
+    font-weight: 900;
+    font-size: 5.5rem;
+    color: var(--gundam-white);
+    margin-bottom: 8px;
+    line-height: 1.2;
+    text-shadow: 0 0 30px rgba(232,232,236,0.15);
+  }
+  .q-word.pinyin-question {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: var(--hud-cyan);
+    text-shadow: 0 0 20px rgba(0,212,255,0.2);
+  }
+  .q-hint {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.85rem;
+    color: var(--hud-amber);
+    margin-top: 6px;
+    letter-spacing: 1px;
+  }
+
+  /* Options — Armor panel buttons */
+  .options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 20px;
+    animation: slideUp 0.3s ease;
+  }
+  .option-btn {
+    padding: 30px 16px;
+    border: 1px solid var(--hull-edge);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, var(--hull-light) 0%, var(--hull-mid) 100%);
+    cursor: pointer;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 1.3rem;
+    color: var(--text-main);
+    transition: all 0.15s ease;
+    position: relative;
+    text-align: center;
+    line-height: 1.3;
+    overflow: hidden;
+  }
+  .option-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: transparent;
+    transition: background 0.15s ease;
+  }
+  .option-btn .option-chinese {
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 1.9rem;
+    font-weight: 700;
+  }
+  .option-btn:hover:not(.disabled) {
+    border-color: var(--hud-cyan-dim);
+    background: linear-gradient(180deg, var(--hull-edge) 0%, var(--hull-light) 100%);
+    color: var(--text-bright);
+    box-shadow: 0 0 15px rgba(0,212,255,0.08);
+  }
+  .option-btn:hover:not(.disabled)::before {
+    background: var(--hud-cyan);
+    box-shadow: 0 0 8px rgba(0,212,255,0.4);
+  }
+  .option-btn:active:not(.disabled) {
+    transform: scale(0.98);
+  }
+  .option-btn.correct {
+    border-color: var(--hud-green);
+    background: linear-gradient(180deg, rgba(0,255,136,0.12) 0%, rgba(0,204,102,0.06) 100%);
+    color: var(--hud-green);
+    box-shadow: 0 0 20px rgba(0,255,136,0.15);
+    animation: correctPulse 0.5s ease;
+  }
+  .option-btn.correct::before {
+    background: var(--hud-green);
+    box-shadow: 0 0 10px rgba(0,255,136,0.6);
+  }
+  .option-btn.wrong {
+    border-color: var(--hud-red);
+    background: linear-gradient(180deg, rgba(255,51,68,0.12) 0%, rgba(209,43,43,0.06) 100%);
+    color: var(--hud-red);
+    box-shadow: 0 0 20px rgba(255,51,68,0.15);
+    animation: alertShake 0.4s ease;
+  }
+  .option-btn.wrong::before {
+    background: var(--hud-red);
+    box-shadow: 0 0 10px rgba(255,51,68,0.6);
+  }
+  .option-btn.disabled { cursor: default; opacity: 0.35; }
+  .option-btn.disabled.correct { opacity: 1; }
+
+  /* Feedback */
+  .feedback {
+    text-align: center;
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+  }
+  .feedback-msg {
+    font-family: 'Orbitron', monospace;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 14px 32px;
+    border-radius: 2px;
+    animation: feedbackIn 0.3s ease;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .feedback-msg.correct {
+    background: rgba(0,255,136,0.1);
+    color: var(--hud-green);
+    border: 1px solid rgba(0,255,136,0.3);
+    box-shadow: 0 0 15px rgba(0,255,136,0.1);
+  }
+  .feedback-msg.wrong {
+    background: rgba(255,51,68,0.1);
+    color: var(--hud-red);
+    border: 1px solid rgba(255,51,68,0.3);
+    box-shadow: 0 0 15px rgba(255,51,68,0.1);
+  }
+
+  /* Floating effects */
+  .beam-float {
+    position: fixed;
+    width: 3px;
+    height: 40px;
+    border-radius: 2px;
+    animation: beamRise 0.7s ease-out forwards;
+    z-index: 100;
+    pointer-events: none;
+  }
+  .beam-float.green { background: linear-gradient(180deg, transparent, var(--hud-green)); box-shadow: 0 0 8px var(--hud-green); }
+  .beam-float.red { background: linear-gradient(180deg, transparent, var(--hud-red)); box-shadow: 0 0 8px var(--hud-red); }
+  @keyframes beamRise {
+    0% { opacity: 1; transform: translateY(0) scaleY(1); }
+    100% { opacity: 0; transform: translateY(-80px) scaleY(0.3); }
+  }
+
+  .score-float {
+    position: fixed;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--hud-green);
+    text-shadow: 0 0 8px rgba(0,255,136,0.5);
+    animation: scoreRise 0.8s ease-out forwards;
+    z-index: 100;
+    pointer-events: none;
+    letter-spacing: 1px;
+  }
+  @keyframes scoreRise {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-60px); }
+  }
+
+  /* Results Screen */
+  .results { text-align: center; animation: slideUp 0.5s ease; }
+  .results-card {
+    background: var(--panel-bg);
+    border-radius: var(--radius-lg);
+    padding: 52px 36px;
+    border: 1px solid var(--panel-border);
+    position: relative;
+    clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+  }
+  .results-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--gundam-red), var(--gundam-yellow), var(--gundam-blue-light));
+  }
+  .results-emoji {
+    font-size: 4.5rem;
+    margin-bottom: 16px;
+    animation: mechaDeploy 0.7s ease;
+  }
+  @keyframes mechaDeploy {
+    0% { transform: scale(0) rotate(-90deg); opacity: 0; }
+    60% { transform: scale(1.15) rotate(5deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); }
+  }
+  .results-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--gundam-white);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .results-score {
+    font-family: 'Orbitron', monospace;
+    font-size: 2.8rem;
+    font-weight: 900;
+    margin: 24px 0;
+  }
+  .results-score .correct-count { color: var(--hud-green); text-shadow: 0 0 12px rgba(0,255,136,0.3); }
+  .results-score .total-count { color: var(--hull-edge); }
+  .results-detail {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.55rem;
+    color: rgba(200,204,216,0.5);
+    margin-bottom: 6px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .results-pct {
+    font-family: 'Orbitron', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 28px;
+    letter-spacing: 2px;
+  }
+
+  .missed-section { margin-top: 24px; text-align: left; }
+  .missed-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.55rem;
+    color: var(--gundam-red-glow);
+    margin-bottom: 12px;
+    text-align: center;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .missed-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: rgba(255,51,68,0.05);
+    border-radius: var(--radius);
+    margin-bottom: 6px;
+    border-left: 3px solid var(--gundam-red);
+    border: 1px solid rgba(255,51,68,0.15);
+    border-left: 3px solid var(--gundam-red);
+  }
+  .missed-hanzi {
+    font-family: 'Noto Sans SC', sans-serif;
+    font-weight: 700;
+    font-size: 1.35rem;
+    color: var(--gundam-white);
+    min-width: 70px;
+  }
+  .missed-pinyin {
+    color: var(--hud-amber);
+    font-weight: 600;
+    font-size: 0.95rem;
+    min-width: 90px;
+    font-family: 'Rajdhani', sans-serif;
+  }
+  .missed-eng {
+    color: var(--text-main);
+    font-size: 0.95rem;
+    flex: 1;
+    opacity: 0.7;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 18px 44px;
+    border: 1px solid var(--gundam-red);
+    border-radius: 2px;
+    background: linear-gradient(180deg, rgba(209,43,43,0.2) 0%, rgba(209,43,43,0.1) 100%);
+    color: var(--gundam-white);
+    font-family: 'Orbitron', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 8px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(209,43,43,0.1), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.5s ease;
+  }
+  .btn-primary:hover {
+    background: linear-gradient(180deg, rgba(209,43,43,0.35) 0%, rgba(209,43,43,0.2) 100%);
+    box-shadow: 0 0 25px rgba(209,43,43,0.2);
+    border-color: var(--gundam-red-glow);
+  }
+  .btn-primary:hover::before {
+    transform: translateX(100%);
+  }
+  .btn-restart {
+    border-color: var(--hud-green-dim);
+    background: linear-gradient(180deg, rgba(0,255,136,0.12) 0%, rgba(0,204,102,0.06) 100%);
+  }
+  .btn-restart:hover {
+    background: linear-gradient(180deg, rgba(0,255,136,0.25) 0%, rgba(0,204,102,0.12) 100%);
+    box-shadow: 0 0 25px rgba(0,255,136,0.15);
+    border-color: var(--hud-green);
+  }
+
+  /* Settings */
+  .settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin-bottom: 24px;
+    animation: slideUp 0.5s ease 0.15s both;
+  }
+  .setting-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem;
+    color: rgba(200,204,216,0.4);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .count-selector { display: flex; gap: 6px; }
+  .count-btn {
+    padding: 14px 26px;
+    border: 1px solid var(--hull-edge);
+    border-radius: 2px;
+    background: var(--hull-mid);
+    cursor: pointer;
+    font-family: 'Orbitron', monospace;
+    color: var(--text-main);
+    transition: all 0.15s ease;
+    text-align: center;
+    line-height: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+  .count-num {
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  .count-sub {
+    font-size: 0.42rem;
+    letter-spacing: 2px;
+    opacity: 0.5;
+  }
+  .count-btn:hover {
+    border-color: var(--hud-cyan-dim);
+    color: var(--hud-cyan);
+  }
+  .count-btn.active {
+    border-color: var(--gundam-yellow);
+    background: rgba(232,184,48,0.1);
+    color: var(--gundam-yellow-glow);
+    box-shadow: 0 0 12px rgba(232,184,48,0.1);
+  }
+
+  /* Animations */
+  @keyframes hudFlicker {
+    0% { opacity: 0; }
+    20% { opacity: 0.6; }
+    25% { opacity: 0.2; }
+    30% { opacity: 0.8; }
+    35% { opacity: 0.4; }
+    50% { opacity: 1; }
+    100% { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes panelSlide {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes correctPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+    100% { transform: scale(1); }
+  }
+  @keyframes alertShake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-5px); }
+    60% { transform: translateX(5px); }
+  }
+  @keyframes feedbackIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Screen layouts — fill viewport */
+  #setup-screen, #quiz-screen, #results-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  #setup-screen {
+    justify-content: center;
+    gap: 4px;
+  }
+  #quiz-screen {
+    justify-content: flex-start;
+  }
+  #results-screen {
+    justify-content: center;
+  }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    animation: slideUp 0.5s ease 0.05s both;
+  }
+  .toolbar-btn {
+    padding: 10px 22px;
+    border: 1px solid var(--hull-edge);
+    border-radius: var(--radius);
+    background: var(--hull-mid);
+    cursor: pointer;
+    font-family: 'Orbitron', monospace;
+    font-weight: 600;
+    font-size: 0.55rem;
+    color: var(--text-main);
+    transition: all 0.2s ease;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .toolbar-btn.add-btn {
+    border-color: rgba(0,255,136,0.3);
+    color: var(--hud-green-dim);
+    background: rgba(0,255,136,0.05);
+  }
+  .toolbar-btn.add-btn:hover {
+    border-color: var(--hud-green);
+    color: var(--hud-green);
+    box-shadow: 0 0 18px rgba(0,255,136,0.15);
+  }
+  .toolbar-btn.remove-btn {
+    border-color: rgba(255,51,68,0.3);
+    color: rgba(255,51,68,0.6);
+    background: rgba(255,51,68,0.05);
+  }
+  .toolbar-btn.remove-btn:hover {
+    border-color: var(--hud-red);
+    color: var(--hud-red);
+    box-shadow: 0 0 18px rgba(255,51,68,0.15);
+  }
+
+  /* Vocab count */
+  .vocab-count {
+    text-align: center;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.65rem;
+    color: var(--hud-cyan);
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+    opacity: 0.7;
+  }
+
+  /* Modal overlay */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+
+  /* Modal */
+  .modal-panel {
+    background: var(--hull-dark);
+    border: 1px solid var(--panel-border);
+    width: 100%;
+    max-width: 580px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 0 60px rgba(0,212,255,0.08);
+    animation: modalSlideIn 0.25s ease;
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  }
+  .modal-panel.green-accent { border-top: 2px solid var(--hud-green); }
+  .modal-panel.red-accent { border-top: 2px solid var(--hud-red); }
+
+  @keyframes modalSlideIn {
+    from { opacity: 0; transform: translateY(-16px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(0,212,255,0.1);
+  }
+  .modal-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .modal-title.green { color: var(--hud-green); }
+  .modal-title.red { color: var(--hud-red); }
+  .modal-close {
+    background: transparent;
+    border: 1px solid var(--hull-edge);
+    color: var(--text-main);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 8px;
+    font-family: monospace;
+    transition: all 0.15s;
+    border-radius: 2px;
+  }
+  .modal-close:hover { border-color: var(--hud-red); color: var(--hud-red); }
+  .modal-body { padding: 20px; }
+
+  /* Tabs */
+  .tab-row { display: flex; gap: 6px; margin-bottom: 18px; }
+  .tab-btn {
+    flex: 1;
+    padding: 10px 4px;
+    border: 1px solid var(--hull-edge);
+    background: transparent;
+    color: rgba(200,204,216,0.4);
+    cursor: pointer;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.42rem;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .tab-btn.active {
+    border-color: var(--hud-green-dim);
+    background: rgba(0,255,136,0.06);
+    color: var(--hud-green);
+    box-shadow: 0 0 10px rgba(0,255,136,0.08);
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Paste area */
+  .g-textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 14px;
+    background: var(--hull-mid);
+    border: 1px solid var(--hull-edge);
+    color: var(--text-main);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1rem;
+    resize: vertical;
+    outline: none;
+    border-radius: var(--radius);
+  }
+  .g-textarea::placeholder { color: rgba(200,204,216,0.2); }
+  .g-textarea:focus { border-color: var(--hud-cyan-dim); box-shadow: 0 0 10px rgba(0,212,255,0.08); }
+
+  .g-hint {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.4rem;
+    color: rgba(200,204,216,0.25);
+    margin-top: 6px;
+    letter-spacing: 1px;
+  }
+
+  /* Drop zone */
+  .drop-zone {
+    border: 2px dashed var(--hull-edge);
+    padding: 36px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: var(--radius);
+  }
+  .drop-zone.dragover {
+    border-color: var(--hud-green);
+    background: rgba(0,255,136,0.05);
+    box-shadow: 0 0 20px rgba(0,255,136,0.08);
+  }
+  .drop-zone-icon { font-size: 32px; margin-bottom: 10px; opacity: 0.4; }
+  .drop-zone-text {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.45rem;
+    color: rgba(200,204,216,0.3);
+    letter-spacing: 2px;
+    line-height: 2;
+  }
+  .drop-browse {
+    margin-top: 12px;
+    padding: 7px 16px;
+    border: 1px solid var(--hull-edge);
+    background: transparent;
+    color: rgba(200,204,216,0.4);
+    cursor: pointer;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.4rem;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .drop-browse:hover { border-color: var(--hud-green-dim); color: var(--hud-green); }
+  .drop-preview-text {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--hud-green);
+    display: none;
+  }
+
+  /* Process button */
+  .g-process-btn {
+    width: 100%;
+    margin-top: 16px;
+    padding: 14px;
+    background: rgba(0,255,136,0.06);
+    border: 1px solid var(--hud-green-dim);
+    color: var(--hud-green);
+    cursor: pointer;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    transition: all 0.2s;
+    box-shadow: 0 0 12px rgba(0,255,136,0.08);
+  }
+  .g-process-btn:hover { background: rgba(0,255,136,0.12); box-shadow: 0 0 22px rgba(0,255,136,0.15); }
+  .g-process-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+
+  /* Loading */
+  .g-loading { display: none; text-align: center; padding: 24px 0; }
+  .g-spinner {
+    width: 28px; height: 28px;
+    border: 2px solid var(--hull-edge);
+    border-top-color: var(--hud-green);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+    margin-bottom: 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .g-loading-msg {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.5rem;
+    color: var(--hud-green-dim);
+    letter-spacing: 3px;
+  }
+
+  /* Preview */
+  .g-preview { display: none; margin-top: 16px; }
+  .g-preview-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.42rem;
+    letter-spacing: 3px;
+    color: var(--hud-green-dim);
+    margin-bottom: 10px;
+  }
+  .g-preview-count {
+    font-size: 0.8rem;
+    color: var(--hud-green);
+    margin-bottom: 12px;
+  }
+  .g-preview-list { max-height: 240px; overflow-y: auto; margin-bottom: 14px; }
+  .preview-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    background: rgba(0,255,136,0.03);
+    border-left: 2px solid rgba(0,255,136,0.2);
+    border-radius: var(--radius);
+  }
+  .preview-row input[type=checkbox] { accent-color: var(--hud-green); width: 16px; height: 16px; flex-shrink: 0; cursor: pointer; }
+  .preview-hanzi { font-family: 'Noto Sans SC', sans-serif; font-size: 1.2rem; font-weight: 700; min-width: 56px; color: var(--gundam-white); }
+  .preview-pinyin { color: var(--hud-amber); min-width: 100px; font-size: 0.85rem; }
+  .preview-def { color: var(--text-main); font-size: 0.85rem; flex: 1; opacity: 0.6; }
+
+  .g-confirm-btn {
+    width: 100%;
+    padding: 14px;
+    background: rgba(0,255,136,0.1);
+    border: 2px solid var(--hud-green);
+    color: var(--hud-green);
+    cursor: pointer;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    font-weight: bold;
+    transition: all 0.2s;
+    box-shadow: 0 0 16px rgba(0,255,136,0.1);
+  }
+  .g-confirm-btn:hover { background: rgba(0,255,136,0.18); box-shadow: 0 0 28px rgba(0,255,136,0.2); }
+
+  /* Manual entry */
+  .manual-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+  .manual-input {
+    flex: 1;
+    min-width: 120px;
+    padding: 12px 14px;
+    background: var(--hull-mid);
+    border: 1px solid var(--hull-edge);
+    color: var(--text-main);
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    outline: none;
+    border-radius: var(--radius);
+  }
+  .manual-input::placeholder { color: rgba(200,204,216,0.2); font-family: 'Rajdhani', sans-serif; font-weight: 400; }
+  .manual-input:focus { border-color: var(--hud-cyan-dim); box-shadow: 0 0 10px rgba(0,212,255,0.08); }
+
+  .g-lookup-btn {
+    padding: 12px 24px;
+    background: rgba(0,255,136,0.08);
+    border: 1px solid var(--hud-green-dim);
+    color: var(--hud-green);
+    cursor: pointer;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    transition: all 0.2s;
+    border-radius: var(--radius);
+    white-space: nowrap;
+  }
+  .g-lookup-btn:hover { background: rgba(0,255,136,0.15); box-shadow: 0 0 16px rgba(0,255,136,0.12); }
+
+  .g-lookup-status {
+    margin-top: 10px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.95rem;
+    min-height: 24px;
+    text-align: center;
+  }
+  .g-lookup-status .success { color: var(--hud-green); }
+  .g-lookup-status .error { color: var(--hud-amber); }
+  .g-lookup-status .added-word {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: rgba(0,255,136,0.05);
+    border: 1px solid rgba(0,255,136,0.15);
+    border-radius: var(--radius);
+    margin-top: 4px;
+  }
+  .g-lookup-status .aw-hanzi { font-family: 'Noto Sans SC', sans-serif; font-weight: 700; font-size: 1.2rem; color: var(--gundam-white); }
+  .g-lookup-status .aw-pinyin { color: var(--hud-amber); }
+  .g-lookup-status .aw-eng { color: var(--text-main); opacity: 0.7; }
+
+  .g-error {
+    font-size: 0.8rem;
+    color: var(--hud-amber);
+    letter-spacing: 1px;
+    margin-top: 10px;
+    display: none;
+    text-align: center;
+  }
+
+  /* Manage modal */
+  .g-search {
+    width: 100%;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    background: var(--hull-mid);
+    border: 1px solid var(--hull-edge);
+    color: var(--text-main);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1rem;
+    outline: none;
+    border-radius: var(--radius);
+  }
+  .g-search::placeholder { color: rgba(200,204,216,0.2); }
+  .g-search:focus { border-color: var(--hud-cyan-dim); }
+  .manage-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    align-items: center;
+  }
+  .manage-ctrl-btn {
+    padding: 6px 14px;
+    border: 1px solid var(--hull-edge);
+    background: transparent;
+    color: rgba(200,204,216,0.4);
+    cursor: pointer;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.4rem;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .manage-ctrl-btn:hover { border-color: var(--hud-cyan-dim); color: var(--hud-cyan); }
+  .manage-count-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.4rem;
+    color: rgba(200,204,216,0.3);
+    letter-spacing: 2px;
+    margin-left: auto;
+  }
+  .manage-list {
+    max-height: 340px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255,51,68,0.1);
+    border-radius: var(--radius);
+  }
+  .manage-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+  .manage-row:hover { background: rgba(255,51,68,0.04); }
+  .manage-row:last-child { border-bottom: none; }
+  .manage-row input[type=checkbox] { accent-color: var(--hud-red); width: 16px; height: 16px; flex-shrink: 0; cursor: pointer; }
+  .manage-row-hanzi { font-family: 'Noto Sans SC', sans-serif; font-size: 1.2rem; font-weight: 700; min-width: 56px; color: var(--gundam-white); }
+  .manage-row-pinyin { color: var(--hud-amber); min-width: 100px; font-size: 0.85rem; }
+  .manage-row-eng { color: var(--text-main); font-size: 0.85rem; flex: 1; opacity: 0.5; }
+  .manage-row.marked { background: rgba(255,51,68,0.06); }
+
+  .g-remove-btn {
+    width: 100%;
+    padding: 14px;
+    background: rgba(255,51,68,0.08);
+    border: 2px solid var(--hud-red);
+    color: var(--hud-red);
+    cursor: pointer;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 3px;
+    font-weight: bold;
+    transition: all 0.2s;
+    box-shadow: 0 0 14px rgba(255,51,68,0.1);
+  }
+  .g-remove-btn:hover { background: rgba(255,51,68,0.16); box-shadow: 0 0 24px rgba(255,51,68,0.2); }
+  .g-remove-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+  .manage-warning {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.38rem;
+    color: rgba(200,204,216,0.2);
+    letter-spacing: 1px;
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  /* Toast */
+  .g-toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    background: var(--panel-bg);
+    border: 1px solid var(--hud-green);
+    padding: 12px 28px;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem;
+    color: var(--hud-green);
+    letter-spacing: 2px;
+    box-shadow: 0 0 20px rgba(0,255,136,0.2);
+    z-index: 3000;
+    transition: transform 0.3s ease;
+    white-space: nowrap;
+  }
+  .g-toast.show { transform: translateX(-50%) translateY(0); }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 480px) {
+    .app { padding: 16px 16px 24px; }
+    .q-word { font-size: 3.2rem; }
+    .q-word.pinyin-question { font-size: 2.4rem; }
+    .mode-btn { padding: 18px 8px; font-size: 0.55rem; }
+    .mode-btn .mode-icon { font-size: 1.5rem; }
+    .option-btn { padding: 22px 10px; font-size: 1.1rem; }
+    .option-btn .option-chinese { font-size: 1.5rem; }
+    .hud-side-text { display: none; }
+    .hud-corner { display: none; }
+    .stat-value { font-size: 1.3rem; }
+    .count-btn { padding: 10px 16px; }
+    .count-num { font-size: 0.9rem; }
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+</head>
+<body>
+
+<!-- HUD decorations -->
+<div class="hud-line-top"></div>
+<div class="hud-line-bottom"></div>
+<div class="hud-corner hud-corner-tl"></div>
+<div class="hud-corner hud-corner-tr"></div>
+<div class="hud-corner hud-corner-bl"></div>
+<div class="hud-corner hud-corner-br"></div>
+<div class="hud-side-text hud-side-left">EFSF · RX-78-2 · FEDERATION</div>
+<div class="hud-side-text hud-side-right">MOBILE SUIT · OPERATING SYSTEM</div>
+
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-badge">Earth Federation</div>
+    <h1>
+      <span class="kanji">汉语</span> QUIZ
+      <span class="sub">Mobile Suit Academy</span>
+    </h1>
+    <div class="tri-stripe">
+      <span class="s-red"></span>
+      <span class="s-white"></span>
+      <span class="s-blue"></span>
+      <span class="s-yellow"></span>
+    </div>
+    <p>NEWTYPE VOCABULARY TRAINING SYSTEM</p>
+  </div>
+
+  <!-- Setup Screen -->
+  <div id="setup-screen">
+    <div class="toolbar">
+      <button class="toolbar-btn add-btn" onclick="openAddModal()">⊕ ADD VOCAB</button>
+      <button class="toolbar-btn remove-btn" onclick="openManage()">✕ REMOVE VOCAB</button>
+    </div>
+    <div class="vocab-count" id="vocab-count"></div>
+
+    <div class="mode-selector">
+      <button class="mode-btn active" data-mode="hanzi-eng" onclick="selectMode(this)">
+        <span class="mode-icon">字→A</span>
+        Hanzi → English
+      </button>
+      <button class="mode-btn" data-mode="hanzi-pinyin" onclick="selectMode(this)">
+        <span class="mode-icon">字→pīn</span>
+        Hanzi → Pinyin
+      </button>
+      <button class="mode-btn" data-mode="pinyin-eng" onclick="selectMode(this)">
+        <span class="mode-icon">pīn→A</span>
+        Pinyin → English
+      </button>
+    </div>
+
+    <div class="settings-row">
+      <span class="setting-label">Questions</span>
+      <div class="count-selector">
+        <button class="count-btn" data-count="10" onclick="selectCount(this)"><span class="count-num">10</span><span class="count-sub">SORTIE</span></button>
+        <button class="count-btn active" data-count="20" onclick="selectCount(this)"><span class="count-num">20</span><span class="count-sub">SORTIE</span></button>
+        <button class="count-btn" data-count="40" onclick="selectCount(this)"><span class="count-num">40</span><span class="count-sub">SORTIE</span></button>
+        <button class="count-btn" data-count="66" onclick="selectCount(this)"><span class="count-num" id="all-count">66</span><span class="count-sub">ALL</span></button>
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top: 36px;">
+      <button class="btn-primary" onclick="startQuiz()">
+        ▶ LAUNCH
+      </button>
+    </div>
+  </div>
+
+  <!-- Quiz Screen -->
+  <div id="quiz-screen" class="hidden">
+    <div class="stats-bar">
+      <div class="stat">
+        <div class="stat-value score" id="score-val">0</div>
+        <div class="stat-label">Hits</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value streak" id="streak-val">0</div>
+        <div class="stat-label">Combo</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value progress" id="progress-val">1/20</div>
+        <div class="stat-label">Target</div>
+      </div>
+    </div>
+
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+
+    <div class="question-card" id="question-card">
+      <div class="card-corner" id="card-corner">TGT-001</div>
+      <div class="q-label" id="q-label">IDENTIFY TARGET</div>
+      <div class="q-word" id="q-word">校服</div>
+      <div class="q-hint" id="q-hint"></div>
+    </div>
+
+    <div class="options" id="options-grid"></div>
+    <div class="feedback" id="feedback"></div>
+  </div>
+
+  <!-- Results Screen -->
+  <div id="results-screen" class="hidden"></div>
+</div>
+
+<!-- ADD VOCABULARY MODAL -->
+<div class="modal-overlay" id="add-overlay">
+  <div class="modal-panel green-accent">
+    <div class="modal-header">
+      <div class="modal-title green">⊕ DEPLOY NEW VOCABULARY</div>
+      <button class="modal-close" onclick="closeAddModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="tab-panel active" id="tab-manual">
+        <div class="g-hint" style="margin-bottom:12px;">ENTER CHINESE WORDS — PINYIN &amp; DEFINITION AUTO-FILLED OR ENTER MANUALLY</div>
+        <div class="manual-fields">
+          <div class="manual-row">
+            <input class="manual-input" id="m-hanzi" type="text" placeholder="汉字 (e.g. 你好)" style="flex:2;font-size:1.3rem;"/>
+            <input class="manual-input" id="m-pinyin" type="text" placeholder="Pinyin (auto or manual)" style="flex:2;font-family:'Rajdhani',sans-serif;font-weight:600;"/>
+            <input class="manual-input" id="m-english" type="text" placeholder="Definition (auto or manual)" style="flex:3;font-family:'Rajdhani',sans-serif;font-weight:600;"/>
+            <button class="g-lookup-btn" onclick="lookupAndAdd()">⊕ ADD</button>
+          </div>
+        </div>
+        <div class="g-lookup-status" id="lookup-status"></div>
+
+        <div style="margin-top:20px; border-top:1px solid var(--hull-edge); padding-top:16px;">
+          <div class="g-hint" style="margin-bottom:10px;">OR PASTE MULTIPLE WORDS — ONE PER LINE</div>
+          <textarea class="g-textarea" id="bulk-area" placeholder="礼物&#10;高兴&#10;唱歌&#10;功夫" style="min-height:100px;font-family:'Noto Sans SC',sans-serif;font-size:1.2rem;"></textarea>
+          <button class="g-confirm-btn" style="margin-top:10px;" onclick="bulkLookup()">⚡ LOOK UP &amp; ADD ALL</button>
+          <div class="g-lookup-status" id="bulk-status"></div>
+        </div>
+
+        <div style="margin-top:20px; border-top:1px solid var(--hull-edge); padding-top:16px;">
+          <div class="g-hint" style="margin-bottom:10px;">OR IMPORT FROM FILE — DRAG &amp; DROP OR CLICK</div>
+          <div class="drop-zone" id="import-drop-zone" onclick="document.getElementById('import-file-input').click()">
+            <div class="drop-zone-icon">📁</div>
+            <div class="drop-zone-text">
+              DROP A FILE OR IMAGE HERE<br>
+              <span style="font-size:0.5rem;color:var(--hud-green);opacity:0.6;letter-spacing:1px;">
+                .TXT · .CSV · .DOCX · .JPG · .PNG
+              </span>
+            </div>
+            <button class="drop-browse" onclick="event.stopPropagation();document.getElementById('import-file-input').click()">BROWSE FILES</button>
+            <input type="file" id="import-file-input" accept=".txt,.csv,.md,.tsv,.docx,.doc,.jpg,.jpeg,.png,.webp" style="display:none;"/>
+          </div>
+          <div id="import-file-info" style="display:none;margin-top:10px;text-align:center;"></div>
+          <div class="g-lookup-status" id="import-status"></div>
+          <div id="import-preview" style="display:none;margin-top:12px;">
+            <div class="g-hint" style="margin-bottom:8px;">FOUND IN DICTIONARY — UNCHECK TO SKIP</div>
+            <div id="import-preview-list" style="max-height:200px;overflow-y:auto;margin-bottom:10px;"></div>
+            <button class="g-confirm-btn" id="import-confirm-btn" onclick="confirmImport()">⊕ DEPLOY SELECTED TO QUIZ</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGE / REMOVE MODAL -->
+<div class="modal-overlay" id="manage-overlay">
+  <div class="modal-panel red-accent">
+    <div class="modal-header">
+      <div class="modal-title red">✕ PURGE VOCABULARY UNITS</div>
+      <button class="modal-close" onclick="closeManage()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input class="g-search" id="manage-search" type="text" placeholder="Search words..." oninput="renderManageList()"/>
+      <div class="manage-controls">
+        <button class="manage-ctrl-btn" onclick="manageSelectAll()">SELECT ALL</button>
+        <button class="manage-ctrl-btn" onclick="manageSelectNone()">CLEAR</button>
+        <span class="manage-count-label" id="manage-count"></span>
+      </div>
+      <div class="manage-list" id="manage-list"></div>
+      <button class="g-remove-btn" id="remove-btn" onclick="confirmRemove()" disabled>✕ REMOVE SELECTED</button>
+      <div class="manage-warning">WARNING: REMOVED UNITS CANNOT BE RECOVERED WITHOUT RE-ADDING</div>
+    </div>
+  </div>
+</div>
+
+<div class="g-toast" id="toast"></div>
+
+<script>
+const DEFAULT_VOCAB = [
+  { hanzi: "校服", pinyin: "xiàofú", english: "school uniform" },
+  { hanzi: "穿", pinyin: "chuān", english: "to wear" },
+  { hanzi: "衣服", pinyin: "yīfu", english: "clothes" },
+  { hanzi: "流行", pinyin: "liúxíng", english: "popular / trendy" },
+  { hanzi: "红色", pinyin: "hóngsè", english: "red (color)" },
+  { hanzi: "白色", pinyin: "báisè", english: "white (color)" },
+  { hanzi: "鞋子", pinyin: "xiézi", english: "shoes" },
+  { hanzi: "黑色", pinyin: "hēisè", english: "black (color)" },
+  { hanzi: "裤子", pinyin: "kùzi", english: "pants" },
+  { hanzi: "裙子", pinyin: "qúnzi", english: "skirt" },
+  { hanzi: "颜色", pinyin: "yánsè", english: "color" },
+  { hanzi: "运动服", pinyin: "yùndòngfú", english: "sportswear" },
+  { hanzi: "运动鞋", pinyin: "yùndòngxié", english: "sneakers" },
+  { hanzi: "皮鞋", pinyin: "píxié", english: "leather shoes" },
+  { hanzi: "出去", pinyin: "chūqù", english: "to go out" },
+  { hanzi: "晚会", pinyin: "wǎnhuì", english: "evening party" },
+  { hanzi: "越来越", pinyin: "yuèláiyuè", english: "more and more" },
+  { hanzi: "黄色", pinyin: "huángsè", english: "yellow (color)" },
+  { hanzi: "橙色", pinyin: "chéngsè", english: "orange (color)" },
+  { hanzi: "紫色", pinyin: "zǐsè", english: "purple (color)" },
+  { hanzi: "蓝色", pinyin: "lánsè", english: "blue (color)" },
+  { hanzi: "知道", pinyin: "zhīdào", english: "to know" },
+  { hanzi: "京剧", pinyin: "jīngjù", english: "Peking opera" },
+  { hanzi: "古老", pinyin: "gǔlǎo", english: "ancient" },
+  { hanzi: "剧服", pinyin: "jùfú", english: "theatrical costume" },
+  { hanzi: "脸", pinyin: "liǎn", english: "face" },
+  { hanzi: "唱歌", pinyin: "chànggē", english: "to sing" },
+  { hanzi: "跳舞", pinyin: "tiàowǔ", english: "to dance" },
+  { hanzi: "功夫", pinyin: "gōngfu", english: "kung fu" },
+  { hanzi: "网站", pinyin: "wǎngzhàn", english: "website" },
+  { hanzi: "事", pinyin: "shì", english: "matter / thing" },
+  { hanzi: "听", pinyin: "tīng", english: "to listen" },
+  { hanzi: "音乐会", pinyin: "yīnyuèhuì", english: "concert" },
+  { hanzi: "订票", pinyin: "dìngpiào", english: "to book tickets" },
+  { hanzi: "外地", pinyin: "wàidì", english: "other places" },
+  { hanzi: "玩", pinyin: "wán", english: "to play / have fun" },
+  { hanzi: "休息", pinyin: "xiūxi", english: "to rest" },
+  { hanzi: "这些", pinyin: "zhèxiē", english: "these" },
+  { hanzi: "快要", pinyin: "kuàiyào", english: "about to / soon" },
+  { hanzi: "告诉", pinyin: "gàosu", english: "to tell" },
+  { hanzi: "旅游", pinyin: "lǚyóu", english: "to travel / tourism" },
+  { hanzi: "门票", pinyin: "ménpiào", english: "admission ticket" },
+  { hanzi: "船", pinyin: "chuán", english: "boat" },
+  { hanzi: "旅游团", pinyin: "lǚyóutuán", english: "tour group" },
+  { hanzi: "用", pinyin: "yòng", english: "to use" },
+  { hanzi: "故事", pinyin: "gùshi", english: "story" },
+  { hanzi: "外语", pinyin: "wàiyǔ", english: "foreign language" },
+  { hanzi: "外国", pinyin: "wàiguó", english: "foreign country" },
+  { hanzi: "只有", pinyin: "zhǐyǒu", english: "only" },
+  { hanzi: "老年人", pinyin: "lǎoniánrén", english: "elderly people" },
+  { hanzi: "住", pinyin: "zhù", english: "to live / stay" },
+  { hanzi: "发现", pinyin: "fāxiàn", english: "to discover" },
+  { hanzi: "表演", pinyin: "biǎoyǎn", english: "performance" },
+  { hanzi: "一边", pinyin: "yìbiān", english: "at the same time" },
+  { hanzi: "跟着", pinyin: "gēnzhe", english: "to follow" },
+  { hanzi: "票", pinyin: "piào", english: "ticket" },
+  { hanzi: "剧院", pinyin: "jùyuàn", english: "theater" },
+  { hanzi: "第一次", pinyin: "dìyīcì", english: "first time" },
+  { hanzi: "看见", pinyin: "kànjiàn", english: "to see / spot" },
+  { hanzi: "年轻人", pinyin: "niánqīngrén", english: "young people" },
+  { hanzi: "半场", pinyin: "bànchǎng", english: "intermission" },
+  { hanzi: "礼物", pinyin: "lǐwù", english: "gift" },
+  { hanzi: "唱片", pinyin: "chàngpiàn", english: "record / album" },
+  { hanzi: "后台", pinyin: "hòutái", english: "backstage" },
+  { hanzi: "见面", pinyin: "jiànmiàn", english: "to meet" },
+  { hanzi: "高兴", pinyin: "gāoxìng", english: "happy" },
+];
+let VOCAB = [...DEFAULT_VOCAB];
+
+let currentMode = 'hanzi-eng';
+let questionCount = 20;
+let questions = [];
+let currentQ = 0;
+let score = 0;
+let streak = 0;
+let bestStreak = 0;
+let missed = [];
+let answered = false;
+
+const correctPhrases = ["TARGET LOCKED 太好了!", "DIRECT HIT 很棒!", "MISSION CLEAR 对了!", "NEWTYPE FLASH 厉害!", "BEAM CONNECT 加油!"];
+const wrongPhrases = ["ARMOR BREACH!", "EVADE FAILED!", "RECALIBRATING...", "SYSTEMS RESET!", "RETARGET!"];
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function selectMode(btn) {
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentMode = btn.dataset.mode;
+}
+
+function selectCount(btn) {
+  document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  questionCount = parseInt(btn.dataset.count);
+}
+
+function getQuestion(word) {
+  if (currentMode === 'hanzi-eng') return { prompt: word.hanzi, answer: word.english, answerKey: 'english', label: 'IDENTIFY TARGET', isChinese: true };
+  if (currentMode === 'hanzi-pinyin') return { prompt: word.hanzi, answer: word.pinyin, answerKey: 'pinyin', label: 'DECODE SIGNAL', isChinese: true };
+  if (currentMode === 'pinyin-eng') return { prompt: word.pinyin, answer: word.english, answerKey: 'english', label: 'TRANSLATE COMM', isChinese: false };
+}
+
+function getOptions(correctWord, answerKey) {
+  const correct = correctWord[answerKey];
+  let pool = VOCAB.filter(w => w[answerKey] !== correct);
+  pool = shuffle(pool).slice(0, 3);
+  return shuffle([...pool.map(w => w[answerKey]), correct]);
+}
+
+function spawnBeam(x, y, type) {
+  const beam = document.createElement('div');
+  beam.className = `beam-float ${type}`;
+  beam.style.left = x + 'px';
+  beam.style.top = y + 'px';
+  document.body.appendChild(beam);
+  setTimeout(() => beam.remove(), 700);
+}
+
+function spawnScore(x, y, text) {
+  const el = document.createElement('div');
+  el.className = 'score-float';
+  el.textContent = text;
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 800);
+}
+
+function startQuiz() {
+  const shuffled = shuffle(VOCAB);
+  questions = shuffled.slice(0, Math.min(questionCount, VOCAB.length));
+  currentQ = 0; score = 0; streak = 0; bestStreak = 0; missed = []; answered = false;
+  document.getElementById('setup-screen').classList.add('hidden');
+  document.getElementById('results-screen').classList.add('hidden');
+  document.getElementById('quiz-screen').classList.remove('hidden');
+  showQuestion();
+}
+
+function showQuestion() {
+  answered = false;
+  const word = questions[currentQ];
+  const q = getQuestion(word);
+  const options = getOptions(word, q.answerKey);
+
+  document.getElementById('q-label').textContent = q.label;
+  const qWord = document.getElementById('q-word');
+  qWord.textContent = q.prompt;
+  qWord.className = q.isChinese ? 'q-word' : 'q-word pinyin-question';
+  document.getElementById('q-hint').textContent = '';
+  document.getElementById('card-corner').textContent = `TGT-${String(currentQ + 1).padStart(3, '0')}`;
+  document.getElementById('score-val').textContent = score;
+  document.getElementById('streak-val').textContent = streak;
+  document.getElementById('progress-val').textContent = `${currentQ + 1}/${questions.length}`;
+  document.getElementById('progress-fill').style.width = `${(currentQ / questions.length) * 100}%`;
+  document.getElementById('feedback').innerHTML = '';
+
+  const grid = document.getElementById('options-grid');
+  grid.innerHTML = '';
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    if (/[\u4e00-\u9fff]/.test(opt)) {
+      btn.innerHTML = `<span class="option-chinese">${opt}</span>`;
+    } else {
+      btn.textContent = opt;
+    }
+    btn.addEventListener('click', (e) => handleAnswer(btn, opt, q.answer, word, e));
+    grid.appendChild(btn);
+  });
+
+  const card = document.getElementById('question-card');
+  card.style.animation = 'none';
+  card.offsetHeight;
+  card.style.animation = 'panelSlide 0.35s ease';
+}
+
+function handleAnswer(btn, selected, correct, word, event) {
+  if (answered) return;
+  answered = true;
+
+  const buttons = document.querySelectorAll('.option-btn');
+  const isCorrect = selected === correct;
+
+  buttons.forEach(b => {
+    b.classList.add('disabled');
+    const txt = b.textContent || b.querySelector('.option-chinese')?.textContent;
+    if (txt === correct) b.classList.add('correct');
+  });
+
+  if (isCorrect) {
+    btn.classList.add('correct');
+    score++; streak++;
+    if (streak > bestStreak) bestStreak = streak;
+    showFeedback(true);
+    const rect = btn.getBoundingClientRect();
+    spawnBeam(rect.left + rect.width / 2, rect.top, 'green');
+    spawnScore(rect.left + rect.width / 2 + 15, rect.top - 5, '+1');
+    if (streak % 5 === 0) spawnScore(rect.left + rect.width / 2 - 30, rect.top - 20, 'COMBO×' + streak);
+  } else {
+    btn.classList.add('wrong');
+    streak = 0;
+    missed.push(word);
+    showFeedback(false);
+    const rect = btn.getBoundingClientRect();
+    spawnBeam(rect.left + rect.width / 2, rect.top, 'red');
+    document.getElementById('q-hint').textContent = currentMode === 'hanzi-eng'
+      ? `${word.pinyin}` : currentMode === 'hanzi-pinyin'
+      ? `${word.english}` : `${word.hanzi}`;
+  }
+
+  document.getElementById('score-val').textContent = score;
+  document.getElementById('streak-val').textContent = streak;
+
+  setTimeout(() => {
+    currentQ++;
+    if (currentQ < questions.length) showQuestion();
+    else showResults();
+  }, 1200);
+}
+
+function showFeedback(correct) {
+  const fb = document.getElementById('feedback');
+  const phrases = correct ? correctPhrases : wrongPhrases;
+  const msg = phrases[Math.floor(Math.random() * phrases.length)];
+  fb.innerHTML = `<span class="feedback-msg ${correct ? 'correct' : 'wrong'}">${msg}</span>`;
+}
+
+function showResults() {
+  document.getElementById('quiz-screen').classList.add('hidden');
+  const screen = document.getElementById('results-screen');
+  screen.classList.remove('hidden');
+
+  const pct = Math.round((score / questions.length) * 100);
+  let emoji = '🤖', title = 'MISSION COMPLETE';
+  if (pct < 50) { emoji = '🔧'; title = 'REPAIR NEEDED'; }
+  else if (pct < 70) { emoji = '🛡️'; title = 'MISSION SURVIVED'; }
+  else if (pct < 90) { emoji = '⚡'; title = 'ACE PILOT'; }
+  else { emoji = '🌟'; title = 'NEWTYPE AWAKENED'; }
+
+  let missedHTML = '';
+  if (missed.length > 0) {
+    missedHTML = `
+      <div class="missed-section">
+        <div class="missed-title">◆ DAMAGE REPORT ◆</div>
+        ${missed.map(w => `
+          <div class="missed-item">
+            <span class="missed-hanzi">${w.hanzi}</span>
+            <span class="missed-pinyin">${w.pinyin}</span>
+            <span class="missed-eng">${w.english}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  const modeLabel = currentMode === 'hanzi-eng' ? 'Hanzi → English' : currentMode === 'hanzi-pinyin' ? 'Hanzi → Pinyin' : 'Pinyin → English';
+
+  screen.innerHTML = `
+    <div class="results-card">
+      <div class="results-emoji">${emoji}</div>
+      <div class="results-title">${title}</div>
+      <div class="results-detail">${modeLabel} · ${questions.length} TARGETS</div>
+      <div class="results-score">
+        <span class="correct-count">${score}</span><span class="total-count"> / ${questions.length}</span>
+      </div>
+      <div class="results-pct" style="color: ${pct >= 70 ? 'var(--hud-green)' : pct >= 50 ? 'var(--hud-amber)' : 'var(--hud-red)'}">${pct}% ACCURACY</div>
+      <div class="results-detail">MAX COMBO: ${bestStreak} ⚡</div>
+      ${missedHTML}
+      <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <button class="btn-primary btn-restart" onclick="startQuiz()">↻ RE-SORTIE</button>
+        <button class="btn-primary" onclick="backToSetup()">HANGAR →</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('progress-fill').style.width = '100%';
+}
+
+function backToSetup() {
+  document.getElementById('results-screen').classList.add('hidden');
+  document.getElementById('quiz-screen').classList.add('hidden');
+  document.getElementById('setup-screen').classList.remove('hidden');
+  updateVocabCount();
+}
+
+// =================== VOCAB COUNT ===================
+function updateVocabCount() {
+  document.getElementById('vocab-count').textContent = `◆ ${VOCAB.length} UNITS IN DATABASE`;
+  const allBtns = document.querySelectorAll('.count-btn');
+  const lastBtn = allBtns[allBtns.length - 1];
+  if (lastBtn) {
+    lastBtn.dataset.count = VOCAB.length;
+    const numEl = lastBtn.querySelector('.count-num');
+    if (numEl) numEl.textContent = VOCAB.length;
+  }
+  saveVocab();
+}
+
+// =================== PERSISTENT STORAGE ===================
+let storageReady = false;
+
+function saveVocab() {
+  if (!storageReady) return;
+  try {
+    window.storage.set('gundamvocab', JSON.stringify(VOCAB)).catch(() => {});
+  } catch (e) {}
+}
+
+async function loadVocab() {
+  // Poll for storage API availability
+  for (let i = 0; i < 20; i++) {
+    if (window.storage && typeof window.storage.get === 'function') {
+      storageReady = true;
+      break;
+    }
+    await new Promise(r => setTimeout(r, 150));
+  }
+
+  if (storageReady) {
+    try {
+      const result = await window.storage.get('gundamvocab');
+      if (result && result.value) {
+        const saved = JSON.parse(result.value);
+        if (Array.isArray(saved)) {
+          VOCAB.length = 0;
+          saved.forEach(w => VOCAB.push(w));
+        }
+      }
+    } catch (e) {
+      // Key doesn't exist yet — first run, keep DEFAULT_VOCAB
+    }
+  }
+
+  updateVocabCount();
+}
+
+// =================== TOAST ===================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// =================== ADD MODAL ===================
+function openAddModal() {
+  document.getElementById('add-overlay').classList.add('open');
+  resetAddModal();
+}
+function closeAddModal() {
+  document.getElementById('add-overlay').classList.remove('open');
+}
+document.getElementById('add-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('add-overlay')) closeAddModal();
+});
+
+function resetAddModal() {
+  document.getElementById('m-hanzi').value = '';
+  document.getElementById('m-pinyin').value = '';
+  document.getElementById('m-english').value = '';
+  document.getElementById('bulk-area').value = '';
+  document.getElementById('lookup-status').innerHTML = '';
+  document.getElementById('bulk-status').innerHTML = '';
+  document.getElementById('import-file-info').style.display = 'none';
+  document.getElementById('import-status').innerHTML = '';
+  document.getElementById('import-preview').style.display = 'none';
+  importedWords = [];
+}
+
+// =================== LOOKUP & ADD ===================
+async function lookupAndAdd() {
+  const hanzi = document.getElementById('m-hanzi').value.trim();
+  const manualPinyin = document.getElementById('m-pinyin').value.trim();
+  const manualEnglish = document.getElementById('m-english').value.trim();
+
+  if (!hanzi) { showToast('⚠ ENTER A CHINESE WORD'); return; }
+  if (VOCAB.some(w => w.hanzi === hanzi)) {
+    showToast('⚠ "' + hanzi + '" ALREADY IN DATABASE');
+    return;
+  }
+
+  const status = document.getElementById('lookup-status');
+
+  // If all 3 fields filled, add directly
+  if (manualPinyin && manualEnglish) {
+    VOCAB.push({ hanzi, pinyin: manualPinyin, english: manualEnglish });
+    document.getElementById('m-hanzi').value = '';
+    document.getElementById('m-pinyin').value = '';
+    document.getElementById('m-english').value = '';
+    document.getElementById('m-hanzi').focus();
+    updateVocabCount();
+    status.innerHTML = `<div class="added-word"><span class="aw-hanzi">${hanzi}</span><span class="aw-pinyin">${manualPinyin}</span><span class="aw-eng">${manualEnglish}</span></div><div class="success" style="margin-top:6px;">✓ DEPLOYED</div>`;
+    return;
+  }
+
+  // Try auto-lookup for missing fields
+  const local = lookupLocal(hanzi);
+  let pinyin = manualPinyin || (local ? local.pinyin : '');
+  let english = manualEnglish || (local ? local.english : '');
+
+  // If still missing info, try Google Translate
+  if (!pinyin || !english) {
+    status.innerHTML = '<span style="color:var(--hud-cyan);">LOOKING UP...</span>';
+    const gt = await lookupGoogleTranslate(hanzi);
+    if (gt) {
+      if (!pinyin) pinyin = gt.pinyin;
+      if (!english) english = gt.english;
+    }
+  }
+
+  if (pinyin && english) {
+    VOCAB.push({ hanzi, pinyin, english });
+    document.getElementById('m-hanzi').value = '';
+    document.getElementById('m-pinyin').value = '';
+    document.getElementById('m-english').value = '';
+    document.getElementById('m-hanzi').focus();
+    updateVocabCount();
+    status.innerHTML = `<div class="added-word"><span class="aw-hanzi">${hanzi}</span><span class="aw-pinyin">${pinyin}</span><span class="aw-eng">${english}</span></div><div class="success" style="margin-top:6px;">✓ DEPLOYED</div>`;
+  } else {
+    // Auto-fill whatever we found, let user complete the rest
+    if (pinyin && !manualPinyin) document.getElementById('m-pinyin').value = pinyin;
+    if (english && !manualEnglish) document.getElementById('m-english').value = english;
+    const missing = [];
+    if (!pinyin && !manualPinyin) missing.push('pinyin');
+    if (!english && !manualEnglish) missing.push('definition');
+    status.innerHTML = `<span class="error">⚠ COULD NOT AUTO-DETECT ${missing.join(' & ').toUpperCase()} — PLEASE ENTER MANUALLY AND CLICK ADD AGAIN</span>`;
+    if (!pinyin) document.getElementById('m-pinyin').focus();
+    else document.getElementById('m-english').focus();
+  }
+}
+
+async function bulkLookup() {
+  const text = document.getElementById('bulk-area').value.trim();
+  if (!text) { showToast('⚠ ENTER SOME WORDS FIRST'); return; }
+
+  const words = text.split('\n').map(l => {
+    // Strip pinyin in parentheses, then extract only Chinese characters
+    let cleaned = l.replace(/[\(（][^)）]*[\)）]/g, '').trim();
+    const match = cleaned.match(/[\u4e00-\u9fff\u3400-\u4dbf]+/g);
+    return match ? match.join('') : '';
+  }).filter(w => w);
+  if (words.length === 0) { showToast('⚠ NO CHINESE WORDS FOUND'); return; }
+
+  const existing = new Set(VOCAB.map(v => v.hanzi));
+  const newWords = words.filter(w => !existing.has(w));
+  if (newWords.length === 0) { showToast('⚠ ALL WORDS ALREADY IN DATABASE'); return; }
+
+  const status = document.getElementById('bulk-status');
+  let added = 0;
+  const needTranslate = [];
+
+  // Local dict first (instant)
+  newWords.forEach(hanzi => {
+    const local = lookupLocal(hanzi);
+    if (local && !existing.has(hanzi)) {
+      VOCAB.push(local);
+      existing.add(hanzi);
+      added++;
+    } else if (!local) {
+      needTranslate.push(hanzi);
+    }
+  });
+
+  // Google Translate for the rest
+  if (needTranslate.length > 0) {
+    status.innerHTML = `<span style="color:var(--hud-cyan);">${added} from local dict · Looking up ${needTranslate.length} via Google Translate...</span>`;
+    for (const hanzi of needTranslate) {
+      const result = await lookupGoogleTranslate(hanzi);
+      if (result && result.english && !existing.has(hanzi)) {
+        VOCAB.push(result);
+        existing.add(hanzi);
+        added++;
+      }
+    }
+  }
+
+  const stillMissing = newWords.filter(w => !existing.has(w));
+  if (added > 0) {
+    document.getElementById('bulk-area').value = stillMissing.length > 0 ? stillMissing.join('\n') : '';
+    updateVocabCount();
+    let msg = `✓ ${added} UNIT${added !== 1 ? 'S' : ''} DEPLOYED`;
+    if (stillMissing.length > 0) msg += ` · ${stillMissing.length} NOT FOUND (kept in box)`;
+    status.innerHTML = `<span class="success">${msg}</span>`;
+    showToast(`⊕ ${added} UNIT${added !== 1 ? 'S' : ''} DEPLOYED TO DATABASE`);
+  } else {
+    status.innerHTML = `<span class="error">⚠ COULD NOT LOOK UP ANY WORDS</span>`;
+  }
+}
+
+// =================== LOCAL DICTIONARY ===================
+const DICT = {
+"你好":"nǐ hǎo|hello; hi","谢谢":"xièxie|to thank; thanks","再见":"zàijiàn|goodbye","是":"shì|to be; is; yes","不":"bù|not; no","我":"wǒ|I; me","你":"nǐ|you (singular)","他":"tā|he; him","她":"tā|she; her","它":"tā|it","们":"men|plural suffix for pronouns","的":"de|possessive particle; of","了":"le|completed action marker","在":"zài|at; in; to exist","有":"yǒu|to have; there is","没有":"méiyǒu|to not have; there is not","这":"zhè|this; these","那":"nà|that; those","什么":"shénme|what; something","谁":"shuí|who; whom","哪":"nǎ|which; where","哪里":"nǎlǐ|where; wherever","怎么":"zěnme|how; why","为什么":"wèishénme|why","多少":"duōshao|how much; how many","几":"jǐ|how many; several","很":"hěn|very; quite","也":"yě|also; too","都":"dōu|all; both; even","和":"hé|and; with; harmonious","人":"rén|person; people","大":"dà|big; large; great","小":"xiǎo|small; little; young","多":"duō|many; much; more","少":"shǎo|few; little; less","好":"hǎo|good; well; fine","吃":"chī|to eat","喝":"hē|to drink","看":"kàn|to look at; to watch; to read","听":"tīng|to listen; to hear","说":"shuō|to speak; to say","读":"dú|to read aloud","写":"xiě|to write","学":"xué|to learn; to study","做":"zuò|to do; to make","去":"qù|to go","来":"lái|to come","回":"huí|to return; to go back","走":"zǒu|to walk; to go; to leave","坐":"zuò|to sit; to travel by","住":"zhù|to live; to stay; to reside","买":"mǎi|to buy; to purchase","叫":"jiào|to call; to be called","想":"xiǎng|to think; to want; to miss","知道":"zhīdào|to know; to be aware of","认识":"rènshi|to know (a person); to recognize","喜欢":"xǐhuan|to like; to be fond of","爱":"ài|to love; love","工作":"gōngzuò|to work; work; job","学习":"xuéxí|to study; to learn","学校":"xuéxiào|school","学生":"xuésheng|student; pupil","老师":"lǎoshī|teacher","医生":"yīshēng|doctor; physician","朋友":"péngyou|friend","同学":"tóngxué|classmate; fellow student","家":"jiā|home; family; (measure word)","爸爸":"bàba|father; dad","妈妈":"māma|mother; mom","儿子":"érzi|son","女儿":"nǚér|daughter","先生":"xiānsheng|Mr.; sir; husband; teacher","小姐":"xiǎojiě|Miss; young lady","今天":"jīntiān|today","昨天":"zuótiān|yesterday","明天":"míngtiān|tomorrow","现在":"xiànzài|now; at present","时候":"shíhou|time; moment; period","上午":"shàngwǔ|morning; a.m.","下午":"xiàwǔ|afternoon; p.m.","晚上":"wǎnshang|evening; night","点":"diǎn|o'clock; dot; point","分钟":"fēnzhōng|minute","年":"nián|year","月":"yuè|month; moon","日":"rì|day; sun; date","星期":"xīngqī|week","号":"hào|number; date (of the month)","岁":"suì|year (of age)","水":"shuǐ|water","茶":"chá|tea","米饭":"mǐfàn|cooked rice","菜":"cài|dish; vegetable","苹果":"píngguǒ|apple","钱":"qián|money; coin","块":"kuài|yuan (informal); piece; lump","书":"shū|book; letter","电脑":"diànnǎo|computer","电视":"diànshì|television; TV","电话":"diànhuà|telephone; phone call","手机":"shǒujī|cellphone; mobile phone","桌子":"zhuōzi|table; desk","椅子":"yǐzi|chair","衣服":"yīfu|clothes; clothing","天气":"tiānqì|weather","下雨":"xiàyǔ|to rain","猫":"māo|cat","狗":"gǒu|dog","中国":"zhōngguó|China","北京":"běijīng|Beijing","但是":"dànshì|but; however","因为":"yīnwèi|because; owing to","所以":"suǒyǐ|so; therefore; as a result","如果":"rúguǒ|if; in case","虽然":"suīrán|although; even though","已经":"yǐjīng|already","正在":"zhèngzài|in the process of; currently","一定":"yīdìng|surely; certainly; fixed","可以":"kěyǐ|can; may; possible","可能":"kěnéng|maybe; possible; probably","能":"néng|can; to be able to","会":"huì|can; to know how to; meeting","应该":"yīnggāi|should; ought to","必须":"bìxū|must; have to","需要":"xūyào|to need; to require; needs","开始":"kāishǐ|to begin; to start; beginning","结束":"jiéshù|to end; to finish","准备":"zhǔnbèi|to prepare; preparation","帮助":"bāngzhù|to help; help; assistance","等":"děng|to wait; etc.","找":"zhǎo|to look for; to find; to seek","玩":"wán|to play; to have fun; to enjoy","跑":"pǎo|to run","走路":"zǒulù|to walk; to go on foot","起床":"qǐchuáng|to get up; to get out of bed","睡觉":"shuìjiào|to sleep; to go to bed","穿":"chuān|to wear; to put on; to pierce","戴":"dài|to wear (hat/glasses/jewelry)","给":"gěi|to give; for; to","告诉":"gàosu|to tell; to inform","要":"yào|to want; will; going to; important","让":"ràng|to let; to allow; to make","觉得":"juéde|to feel; to think","希望":"xīwàng|to hope; hope; wish","相信":"xiāngxìn|to believe; to trust","担心":"dānxīn|to worry; worried; anxious","害怕":"hàipà|to be afraid; to fear","高兴":"gāoxìng|happy; glad; willing","开心":"kāixīn|happy; joyous","生气":"shēngqì|angry; to get angry","累":"lèi|tired; weary","忙":"máng|busy","快":"kuài|fast; quick; soon","慢":"màn|slow; slowly","新":"xīn|new; fresh","旧":"jiù|old (of things); former","长":"cháng|long; length","短":"duǎn|short; brief","高":"gāo|tall; high","远":"yuǎn|far; distant","近":"jìn|near; close","贵":"guì|expensive; noble","便宜":"piányi|cheap; inexpensive","漂亮":"piàoliang|beautiful; pretty; nice","容易":"róngyì|easy; likely","难":"nán|difficult; hard","重要":"zhòngyào|important; significant","哥哥":"gēge|older brother","姐姐":"jiějie|older sister","弟弟":"dìdi|younger brother","妹妹":"mèimei|younger sister","丈夫":"zhàngfu|husband","妻子":"qīzi|wife","孩子":"háizi|child; children","男":"nán|male; man","女":"nǚ|female; woman","身体":"shēntǐ|body; health","头":"tóu|head; top; first","眼睛":"yǎnjing|eye; eyes","脸":"liǎn|face","手":"shǒu|hand","脚":"jiǎo|foot; leg","鼻子":"bízi|nose","耳朵":"ěrduo|ear","嘴":"zuǐ|mouth","鱼":"yú|fish","鸡蛋":"jīdàn|egg; chicken egg","牛奶":"niúnǎi|milk; cow's milk","水果":"shuǐguǒ|fruit","西瓜":"xīguā|watermelon","咖啡":"kāfēi|coffee","啤酒":"píjiǔ|beer","公共汽车":"gōnggòngqìchē|bus; public bus","出租车":"chūzūchē|taxi","地铁":"dìtiě|subway; metro","飞机":"fēijī|airplane; aircraft","火车":"huǒchē|train","船":"chuán|boat; ship; vessel","自行车":"zìxíngchē|bicycle; bike","路":"lù|road; path; route","医院":"yīyuàn|hospital","商店":"shāngdiàn|shop; store","饭店":"fàndiàn|restaurant; hotel","银行":"yínháng|bank","机场":"jīchǎng|airport","火车站":"huǒchēzhàn|train station","教室":"jiàoshì|classroom","图书馆":"túshūguǎn|library","公司":"gōngsī|company; corporation","公园":"gōngyuán|park","超市":"chāoshì|supermarket","左":"zuǒ|left","右":"yòu|right","前":"qián|front; before; ago","后":"hòu|behind; after; later","上":"shàng|up; above; previous; to go up","下":"xià|down; below; next; to go down","里":"lǐ|inside; in; lining","外":"wài|outside; foreign; external","旁边":"pángbiān|beside; next to","对面":"duìmiàn|opposite; across from","然后":"ránhòu|then; after that; afterwards","而且":"érqiě|moreover; and also; furthermore","还是":"háishi|or (in questions); still","或者":"huòzhě|or; perhaps; maybe","除了":"chúle|except for; besides; apart from","其实":"qíshí|actually; in fact; as a matter of fact","终于":"zhōngyú|at last; finally; eventually","突然":"tūrán|suddenly; unexpected","一直":"yìzhí|always; continuously; straight","经常":"jīngcháng|often; frequently; regularly","有时候":"yǒushíhou|sometimes; at times","刚才":"gāngcái|just now; a moment ago","马上":"mǎshàng|immediately; right away; at once","又":"yòu|again (past); also","再":"zài|again (future); more; then","还":"hái|still; yet; also; even more","才":"cái|only then; just; only","就":"jiù|then; right away; as early as","把":"bǎ|preposition for disposal","被":"bèi|passive marker; by","从":"cóng|from; since","到":"dào|to arrive; to; until","向":"xiàng|toward; to face","离":"lí|away from; to leave","跟":"gēn|with; to follow; and","对":"duì|correct; toward; for; pair","关于":"guānyú|about; regarding; concerning","按照":"ànzhào|according to; in accordance with","通过":"tōngguò|to pass through; by means of; via","打算":"dǎsuàn|to plan; to intend; plan","决定":"juédìng|to decide; decision","选择":"xuǎnzé|to choose; to select; choice","同意":"tóngyì|to agree; to consent","注意":"zhùyì|to pay attention to; attention","记得":"jìde|to remember","忘记":"wàngjì|to forget","明白":"míngbai|to understand; clear; obvious","习惯":"xíguàn|habit; to be used to; custom","参加":"cānjiā|to participate; to join; to attend","解决":"jiějué|to solve; to resolve; to settle","影响":"yǐngxiǎng|to influence; to affect; influence","保护":"bǎohù|to protect; protection","提高":"tígāo|to improve; to raise; to enhance","努力":"nǔlì|to work hard; to strive; effort","成功":"chénggōng|to succeed; success; successful","变化":"biànhuà|change; to change; variation","发展":"fāzhǎn|to develop; development","环境":"huánjìng|environment; surroundings","社会":"shèhuì|society; social","文化":"wénhuà|culture; civilization","历史":"lìshǐ|history; past events","经济":"jīngjì|economy; economic","健康":"jiànkāng|health; healthy","安全":"ānquán|safe; safety; security","幸福":"xìngfú|happiness; happy; blessed","关系":"guānxi|relationship; connection; to matter","机会":"jīhuì|opportunity; chance","经验":"jīngyàn|experience","兴趣":"xìngqù|interest (in something)","音乐":"yīnyuè|music","电影":"diànyǐng|movie; film","运动":"yùndòng|sports; exercise; to exercise","游戏":"yóuxì|game","比赛":"bǐsài|competition; match; to compete","照片":"zhàopiàn|photo; photograph; picture","新闻":"xīnwén|news","节目":"jiémù|program; show","足球":"zúqiú|soccer; football","篮球":"lánqiú|basketball","游泳":"yóuyǒng|to swim; swimming","跑步":"pǎobù|to jog; to run","散步":"sànbù|to take a walk; to go for a stroll","唱歌":"chànggē|to sing (a song)","跳舞":"tiàowǔ|to dance","画":"huà|to draw; to paint; painting","春节":"chūnjié|Spring Festival; Chinese New Year","中秋节":"zhōngqiūjié|Mid-Autumn Festival","生日":"shēngrì|birthday","名字":"míngzi|name","中文":"zhōngwén|Chinese (written language)","汉语":"hànyǔ|Chinese language; Mandarin","外语":"wàiyǔ|foreign language","英文":"yīngwén|English (written)","字":"zì|character; word; letter","词":"cí|word; term","意思":"yìsi|meaning; idea; opinion","不但":"búdàn|not only","无论":"wúlùn|regardless of; no matter what","只要":"zhǐyào|as long as; provided that","尽管":"jǐnguǎn|even though; despite; feel free to","既然":"jìrán|since; now that; given that","否则":"fǒuzé|otherwise; or else","甚至":"shènzhì|even (to the point of)","尤其":"yóuqí|especially; particularly","另外":"lìngwài|in addition; besides; other","总之":"zǒngzhī|in short; in a word","何况":"hékuàng|let alone; much less","根据":"gēnjù|according to; based on; basis","随着":"suízhe|along with; in the wake of","渐渐":"jiànjiàn|gradually; little by little","立刻":"lìkè|immediately; at once; right away","大概":"dàgài|probably; roughly; approximate","恐怕":"kǒngpà|I'm afraid that; perhaps","居然":"jūrán|unexpectedly; to one's surprise","果然":"guǒrán|as expected; sure enough","总是":"zǒngshì|always; invariably","往往":"wǎngwǎng|often; frequently; more often than not","偶尔":"ǒuěr|occasionally; once in a while","几乎":"jīhū|almost; nearly","以前":"yǐqián|before; formerly; previously","以后":"yǐhòu|after; afterwards; later","之间":"zhījiān|between; among","附近":"fùjìn|nearby; in the vicinity","世界":"shìjiè|world","国家":"guójiā|country; nation; state","城市":"chéngshì|city","地方":"dìfang|place; area; region","东西":"dōngxi|thing; stuff","事情":"shìqing|matter; affair; thing","办法":"bànfǎ|method; way; means","条件":"tiáojiàn|condition; requirement","情况":"qíngkuàng|situation; circumstances","原因":"yuányīn|reason; cause","结果":"jiéguǒ|result; outcome; as a result","目的":"mùdì|purpose; aim; goal","感觉":"gǎnjué|feeling; to feel; sense","态度":"tàidu|attitude; manner","数学":"shùxué|mathematics; math","科学":"kēxué|science; scientific","艺术":"yìshù|art; fine arts","技术":"jìshù|technology; technique; skill","教育":"jiàoyù|education; to educate","生活":"shēnghuó|life; to live; livelihood","爱好":"àihào|hobby; interest; fond of","梦想":"mèngxiǎng|dream; to dream of","未来":"wèilái|future; tomorrow; upcoming","过去":"guòqù|past; former; to go over","翻译":"fānyì|to translate; translation; interpreter","词典":"cídiǎn|dictionary","打工":"dǎgōng|to work (part-time/manual); temp job","赚钱":"zhuànqián|to earn money; to make money","工资":"gōngzī|salary; wages; pay","职业":"zhíyè|occupation; profession; career","经理":"jīnglǐ|manager; director","同事":"tóngshì|colleague; coworker","面试":"miànshì|interview; to interview","简历":"jiǎnlì|resume; CV","交通":"jiāotōng|traffic; transportation","停车":"tíngchē|to park; to stop (vehicle)","加油":"jiāyóu|to refuel; come on! (encouragement)","堵车":"dǔchē|traffic jam; traffic congestion","旅游":"lǚyóu|to travel; tourism; trip","旅行":"lǚxíng|to travel; journey; trip","旅游团":"lǚyóutuán|tour group; tour party","导游":"dǎoyóu|tour guide","景点":"jǐngdiǎn|scenic spot; tourist attraction","博物馆":"bówùguǎn|museum","护照":"hùzhào|passport","签证":"qiānzhèng|visa","行李":"xíngli|luggage; baggage","地图":"dìtú|map","门票":"ménpiào|admission ticket; entrance ticket","订票":"dìngpiào|to book tickets; to reserve tickets","订":"dìng|to book; to reserve; to subscribe","出发":"chūfā|to set out; to depart","到达":"dàodá|to arrive; to reach","出国":"chūguó|to go abroad","回国":"huíguó|to return to one's country","参观":"cānguān|to visit (a place); to tour","游览":"yóulǎn|to tour; to go sightseeing","拍照":"pāizhào|to take a photo; to photograph","爬山":"páshān|to climb a mountain; hiking","外地":"wàidì|other places; another part of the country","外国":"wàiguó|foreign country","宾馆":"bīnguǎn|hotel; guesthouse","酒店":"jiǔdiàn|hotel; restaurant","房间":"fángjiān|room","海边":"hǎibiān|seaside; seashore","沙滩":"shātān|beach; sandy beach","岛":"dǎo|island","森林":"sēnlín|forest","山":"shān|mountain; hill","河":"hé|river","海":"hǎi|sea; ocean","天":"tiān|sky; day; heaven","地":"dì|earth; ground; land","花":"huā|flower; to spend","树":"shù|tree","风":"fēng|wind","云":"yún|cloud","太阳":"tàiyáng|sun","月亮":"yuèliang|moon","星星":"xīngxing|star","春天":"chūntiān|spring (season)","夏天":"xiàtiān|summer","秋天":"qiūtiān|autumn; fall","冬天":"dōngtiān|winter","动物":"dòngwù|animal","植物":"zhíwù|plant","熊猫":"xióngmāo|panda; giant panda","颜色":"yánsè|color","红色":"hóngsè|red","白色":"báisè|white","黑色":"hēisè|black","蓝色":"lánsè|blue","绿色":"lǜsè|green","黄色":"huángsè|yellow","紫色":"zǐsè|purple","橙色":"chéngsè|orange (color)","红":"hóng|red","白":"bái|white","黑":"hēi|black","蓝":"lán|blue","绿":"lǜ|green","黄":"huáng|yellow","紫":"zǐ|purple","灰":"huī|gray","粉":"fěn|pink","校服":"xiàofú|school uniform","裤子":"kùzi|pants; trousers","裙子":"qúnzi|skirt; dress","鞋子":"xiézi|shoes","帽子":"màozi|hat; cap","运动服":"yùndòngfú|sportswear; athletic wear","运动鞋":"yùndòngxié|sneakers; athletic shoes; trainers","皮鞋":"píxié|leather shoes","流行":"liúxíng|popular; fashionable; trendy; to spread","京剧":"jīngjù|Peking opera; Beijing opera","古老":"gǔlǎo|ancient; age-old","剧服":"jùfú|theatrical costume","功夫":"gōngfu|kung fu; skill; time spent","网站":"wǎngzhàn|website","事":"shì|matter; thing; affair; event","音乐会":"yīnyuèhuì|concert; recital","晚会":"wǎnhuì|evening party; soirée; gala","越来越":"yuèláiyuè|more and more; increasingly","出去":"chūqù|to go out; to exit","这些":"zhèxiē|these","快要":"kuàiyào|about to; soon; almost","故事":"gùshi|story; tale; narrative","只有":"zhǐyǒu|only; merely; nothing but","老年人":"lǎoniánrén|elderly person; senior citizen","发现":"fāxiàn|to discover; to find; discovery","表演":"biǎoyǎn|to perform; performance; show","一边":"yìbiān|one side; at the same time","跟着":"gēnzhe|to follow; following","票":"piào|ticket; ballot; note","剧院":"jùyuàn|theater; playhouse","第一次":"dìyīcì|first time; for the first time","看见":"kànjiàn|to see; to catch sight of","年轻人":"niánqīngrén|young person; young people","半场":"bànchǎng|half-time; intermission","礼物":"lǐwù|gift; present","唱片":"chàngpiàn|record; album; vinyl","后台":"hòutái|backstage; behind the scenes","见面":"jiànmiàn|to meet; to see (someone)","休息":"xiūxi|to rest; to take a break; rest","面条":"miàntiáo|noodles","包子":"bāozi|steamed stuffed bun","饺子":"jiǎozi|dumpling; jiaozi","鸡":"jī|chicken","牛肉":"niúròu|beef","猪肉":"zhūròu|pork","肉":"ròu|meat; flesh","蔬菜":"shūcài|vegetable; vegetables","面包":"miànbāo|bread","香蕉":"xiāngjiāo|banana","月饼":"yuèbǐng|mooncake","粽子":"zòngzi|rice dumpling (wrapped in leaves)","家人":"jiārén|family member; family","亲戚":"qīnqi|relative; family relation","一":"yī|one; 1","二":"èr|two; 2","三":"sān|three; 3","四":"sì|four; 4","五":"wǔ|five; 5","六":"liù|six; 6","七":"qī|seven; 7","八":"bā|eight; 8","九":"jiǔ|nine; 9","十":"shí|ten; 10","零":"líng|zero; 0","百":"bǎi|hundred; 100","千":"qiān|thousand; 1000","万":"wàn|ten thousand; 10000","两":"liǎng|two (with measure words); a couple of","进":"jìn|to enter; to go in","出":"chū|to exit; to go out","过":"guò|to pass; to cross; (experience marker)","起来":"qǐlái|to get up; to rise; (indicating upward movement)","回来":"huílái|to come back; to return","出来":"chūlái|to come out; to emerge","进去":"jìnqù|to go in; to enter","回去":"huíqù|to go back; to return","开":"kāi|to open; to start; to drive","关":"guān|to close; to turn off; to concern","拿":"ná|to take; to hold; to seize","放":"fàng|to put; to place; to release","送":"sòng|to send; to deliver; to give (as gift)","接":"jiē|to receive; to pick up; to connect","带":"dài|to bring; to take; to lead; to carry","换":"huàn|to change; to exchange; to switch","洗":"xǐ|to wash; to clean","用":"yòng|to use; to employ; with","试":"shì|to try; to test; exam","搬":"bān|to move; to transport","修":"xiū|to repair; to fix; to build","打扫":"dǎsǎo|to clean; to sweep","长城":"chángchéng|the Great Wall (of China)","故宫":"gùgōng|the Forbidden City; the Palace Museum","外滩":"wàitān|the Bund (in Shanghai)","东方明珠":"dōngfāng míngzhū|Oriental Pearl Tower (Shanghai)","暑假":"shǔjià|summer vacation; summer holiday","寒假":"hánjià|winter vacation; winter holiday","假期":"jiàqī|vacation; holiday; period of leave","假":"jiǎ|fake; false; vacation; holiday","先":"xiān|first; before; earlier; in advance","美国":"měiguó|United States; America","英国":"yīngguó|United Kingdom; England","日本":"rìběn|Japan","德国":"déguó|Germany","法国":"fǎguó|France","意大利":"yìdàlì|Italy","西班牙":"xībānyá|Spain","澳大利亚":"àodàlìyà|Australia","加拿大":"jiānádà|Canada","韩国":"hánguó|South Korea","泰国":"tàiguó|Thailand","印度":"yìndù|India","俄罗斯":"éluósī|Russia","埃及":"āijí|Egypt","巴西":"bāxī|Brazil","墨西哥":"mòxīgē|Mexico","新加坡":"xīnjiāpō|Singapore","马来西亚":"mǎláixīyà|Malaysia","越南":"yuènán|Vietnam","菲律宾":"fēilǜbīn|Philippines","新西兰":"xīnxīlán|New Zealand","瑞士":"ruìshì|Switzerland","荷兰":"hélán|Netherlands","上海":"shànghǎi|Shanghai","伦敦":"lúndūn|London","巴黎":"bālí|Paris","纽约":"niǔyuē|New York","东京":"dōngjīng|Tokyo","首尔":"shǒuěr|Seoul","香港":"xiānggǎng|Hong Kong","台湾":"táiwān|Taiwan","广州":"guǎngzhōu|Guangzhou","深圳":"shēnzhèn|Shenzhen","南京":"nánjīng|Nanjing","西安":"xīān|Xi'an","成都":"chéngdū|Chengdu","杭州":"hángzhōu|Hangzhou","重庆":"chóngqìng|Chongqing","天津":"tiānjīn|Tianjin","武汉":"wǔhàn|Wuhan","苏州":"sūzhōu|Suzhou","悉尼":"xīní|Sydney","多伦多":"duōlúnduō|Toronto","洛杉矶":"luòshānjī|Los Angeles","旧金山":"jiùjīnshān|San Francisco","华盛顿":"huáshèngdùn|Washington","天安门":"tiānānmén|Tiananmen (Gate of Heavenly Peace)","颐和园":"yíhéyuán|Summer Palace (Beijing)","兵马俑":"bīngmǎyǒng|Terracotta Warriors","黄山":"huángshān|Yellow Mountain; Mount Huangshan","西湖":"xīhú|West Lake (Hangzhou)","长江":"chángjiāng|Yangtze River; Changjiang","黄河":"huánghé|Yellow River","金字塔":"jīnzìtǎ|pyramid (especially the Egyptian pyramids)","对不起":"duìbuqǐ|sorry; excuse me; I beg your pardon","没关系":"méiguānxi|it doesn't matter; it's okay; never mind","请":"qǐng|please; to invite; to treat","太":"tài|too (excessive); very; extremely","最":"zuì|most; -est (superlative)","非常":"fēicháng|very; extremely","特别":"tèbié|especially; particular; special","比较":"bǐjiào|relatively; comparatively; to compare","完全":"wánquán|completely; entirely; wholly","真":"zhēn|really; truly; genuine","刚":"gāng|just (now); barely","却":"què|but; yet; however","倒":"dào|on the contrary; to pour; to invert","并":"bìng|actually (emphatic in negation); and","节日":"jiérì|festival; holiday","传统":"chuántǒng|tradition; traditional; convention","庆祝":"qìngzhù|to celebrate; celebration","红包":"hóngbāo|red envelope (with money)","灯笼":"dēnglong|lantern","国庆节":"guóqìngjié|National Day (October 1st)","新年":"xīnnián|New Year","圣诞节":"shèngdànjié|Christmas","感冒":"gǎnmào|to catch a cold; cold; flu","发烧":"fāshāo|to have a fever; fever","咳嗽":"késou|to cough; cough","头疼":"tóuténg|headache; to have a headache","药":"yào|medicine; drug; remedy","医":"yī|medical; medicine; to cure","保险":"bǎoxiǎn|insurance; to insure; safe","价格":"jiàgé|price","市场":"shìchǎng|market; marketplace","打折":"dǎzhé|to give a discount; on sale","免费":"miǎnfèi|free of charge; complimentary","超级":"chāojí|super; ultra-","广告":"guǎnggào|advertisement; to advertise","品牌":"pǐnpái|brand; trademark","元":"yuán|yuan (currency); origin","搬家":"bānjiā|to move house; to relocate","家具":"jiājù|furniture","空调":"kōngtiáo|air conditioning; air conditioner","冰箱":"bīngxiāng|refrigerator; fridge","电梯":"diàntī|elevator; escalator","考试":"kǎoshì|exam; test; to take an exam","问题":"wèntí|question; problem; issue","回答":"huídá|to answer; answer; reply","作业":"zuòyè|homework; assignment","课文":"kèwén|text (of a lesson)","词汇":"cíhuì|vocabulary; words","上课":"shàngkè|to attend class; to go to class","下课":"xiàkè|class is over; to finish class","语法":"yǔfǎ|grammar","练习":"liànxí|to practice; exercise","复习":"fùxí|to review; revision","拼音":"pīnyīn|pinyin (romanization of Chinese)","发音":"fāyīn|pronunciation; to pronounce","声调":"shēngdiào|tone (in Chinese)","普通话":"pǔtōnghuà|Mandarin; standard Chinese","龙":"lóng|dragon","老虎":"lǎohǔ|tiger","兔子":"tùzi|rabbit; bunny","猴子":"hóuzi|monkey","鸟":"niǎo|bird","马":"mǎ|horse","网络":"wǎngluò|network; internet","上网":"shàngwǎng|to go online; to surf the web","打电话":"dǎdiànhuà|to make a phone call","介绍":"jièshào|to introduce; introduction","迟到":"chídào|to arrive late; to be late","请假":"qǐngjià|to ask for leave; to request time off","毕业":"bìyè|to graduate; graduation","感谢":"gǎnxiè|to thank; grateful","欢迎":"huānyíng|to welcome; welcome","舒服":"shūfu|comfortable; feeling well","危险":"wēixiǎn|dangerous; danger; perilous","奇怪":"qíguài|strange; odd; weird","正常":"zhèngcháng|normal; regular; ordinary","普通":"pǔtōng|ordinary; common; average","厉害":"lìhai|awesome; formidable; terrible","棒":"bàng|great; wonderful; stick","差":"chà|poor; bad; to lack","错":"cuò|wrong; mistake; error","聪明":"cōngming|smart; clever; intelligent","可爱":"kěài|cute; lovely; adorable","有名":"yǒumíng|famous; well-known","干净":"gānjìng|clean; neat; tidy","方便":"fāngbiàn|convenient; to facilitate","整理":"zhěnglǐ|to organize; to tidy up","收拾":"shōushi|to tidy up; to put in order","邮局":"yóujú|post office","警察":"jǐngchá|police; police officer","政府":"zhèngfǔ|government","自由":"zìyóu|freedom; free; liberty","研究":"yánjiū|to research; research; study","实验":"shíyàn|experiment; to experiment","进步":"jìnbù|progress; to make progress; to improve","满意":"mǎnyì|satisfied; pleased; content","丰富":"fēngfù|rich; abundant; to enrich","各":"gè|each; every; various","每":"měi|each; every","某":"mǒu|certain; some","任何":"rènhé|any; whatever","所有":"suǒyǒu|all; every","其他":"qítā|other; the rest; else","自己":"zìjǐ|oneself; self; one's own","别人":"biérén|other people; others","大家":"dàjiā|everyone; everybody","有的":"yǒude|some (people/things)","一些":"yìxiē|some; a few; a little","一点":"yìdiǎn|a little; a bit","相当":"xiāngdāng|quite; fairly; considerably","越":"yuè|the more... the more...","更":"gèng|even more; still more","极":"jí|extremely; pole; utmost",
+"市中心":"shì zhōngxīn|city center; downtown","收音机":"shōuyīnjī|radio (device)","大堂":"dàtáng|lobby; main hall","客人":"kèrén|guest; visitor; customer","服务":"fúwù|service; to serve","雨伞":"yǔsǎn|umbrella","手表":"shǒubiǎo|wristwatch; watch","张":"zhāng|measure word (for flat objects); to open; (surname)","旅游点":"lǚyóudiǎn|tourist spot; scenic attraction","收":"shōu|to receive; to collect; to accept","伞":"sǎn|umbrella; parasol","表":"biǎo|watch; meter; form; to express","市":"shì|city; market","中心":"zhōngxīn|center; heart; core",
+"服务员":"fúwùyuán|waiter; waitress; attendant","服务台":"fúwùtái|service desk; reception desk","前台":"qiántái|front desk; reception",
+"钥匙":"yàoshi|key","房卡":"fángkǎ|room key card","电梯":"diàntī|elevator; escalator","楼":"lóu|floor; building; story",
+"楼上":"lóushàng|upstairs","楼下":"lóuxià|downstairs","空房":"kōngfáng|vacant room","入住":"rùzhù|to check in (hotel)",
+"退房":"tuìfáng|to check out (hotel)","押金":"yājīn|deposit","单人房":"dānrénfáng|single room","双人房":"shuāngrénfáng|double room",
+"早餐":"zǎocān|breakfast","午餐":"wǔcān|lunch","晚餐":"wǎncān|dinner; supper","自助餐":"zìzhùcān|buffet",
+"床":"chuáng|bed","毛巾":"máojīn|towel","牙刷":"yáshuā|toothbrush","肥皂":"féizào|soap","洗发水":"xǐfàshuǐ|shampoo",
+"窗户":"chuānghu|window","门":"mén|door; gate","钟":"zhōng|clock; bell","灯":"dēng|light; lamp",
+"客厅":"kètīng|living room","卧室":"wòshì|bedroom","厨房":"chúfáng|kitchen","厕所":"cèsuǒ|toilet; bathroom; restroom",
+"卫生间":"wèishēngjiān|bathroom; washroom","阳台":"yángtái|balcony","走廊":"zǒuláng|corridor; hallway",
+"请问":"qǐngwèn|may I ask; excuse me","多少钱":"duōshaoqián|how much money; how much does it cost",
+"不好意思":"bùhǎoyìsi|excuse me; sorry; embarrassed","打扰":"dǎrǎo|to disturb; to bother; excuse me",
+"第一":"dìyī|first; number one","第二":"dìèr|second","第三":"dìsān|third",
+"左边":"zuǒbiān|left side; on the left","右边":"yòubiān|right side; on the right",
+"前面":"qiánmiàn|in front; ahead","后面":"hòumiàn|behind; at the back","中间":"zhōngjiān|middle; between",
+"最近":"zuìjìn|recently; nearest","刚刚":"gānggāng|just now; a moment ago","一会儿":"yíhuìr|a moment; a while",
+"马路":"mǎlù|road; street","公路":"gōnglù|highway; public road","高速":"gāosù|high-speed; highway",
+"十字路口":"shízìlùkǒu|intersection; crossroads","红绿灯":"hónglǜdēng|traffic light",
+"拐":"guǎi|to turn (left/right)","直走":"zhízǒu|to go straight","过马路":"guòmǎlù|to cross the road",
+"东":"dōng|east","南":"nán|south","西":"xī|west","北":"běi|north",
+"东边":"dōngbiān|east side","南边":"nánbiān|south side","西边":"xībiān|west side","北边":"běibiān|north side",
+"对不起":"duìbuqǐ|sorry; I apologize","没事":"méishì|it's nothing; no problem; it's fine",
+"当然":"dāngrán|of course; certainly","大约":"dàyuē|approximately; about","大概":"dàgài|probably; roughly",
+"一般":"yìbān|generally; ordinary; so-so","特别":"tèbié|especially; special; particular",
+"通常":"tōngcháng|usually; normally; generally","平时":"píngshí|usually; in normal times",
+"可惜":"kěxī|it's a pity; what a shame","没想到":"méixiǎngdào|didn't expect; unexpectedly",
+"生病":"shēngbìng|to get sick; to fall ill","打针":"dǎzhēn|to give/get an injection","手术":"shǒushù|surgery; operation",
+"牙齿":"yáchǐ|tooth; teeth","胃":"wèi|stomach","心脏":"xīnzàng|heart (organ)","血":"xiě|blood",
+"处方":"chǔfāng|prescription","检查":"jiǎnchá|to check; to examine; examination",
+"吵":"chǎo|noisy; to quarrel","安静":"ānjìng|quiet; peaceful","干燥":"gānzào|dry; arid",
+"潮湿":"cháoshī|damp; humid; moist","温暖":"wēnnuǎn|warm","凉快":"liángkuai|pleasantly cool",
+"晴天":"qíngtiān|sunny day; clear day","阴天":"yīntiān|cloudy day; overcast","雷":"léi|thunder","闪电":"shǎndiàn|lightning",
+"下雪":"xiàxuě|to snow","刮风":"guāfēng|to be windy","温度":"wēndù|temperature","度":"dù|degree; measure",
+"信":"xìn|letter; mail; to believe","信封":"xìnfēng|envelope","邮票":"yóupiào|postage stamp",
+"包裹":"bāoguǒ|package; parcel","快递":"kuàidì|express delivery; courier",
+"味道":"wèidào|taste; flavor","甜":"tián|sweet","酸":"suān|sour","辣":"là|spicy; hot","苦":"kǔ|bitter",
+"咸":"xián|salty","淡":"dàn|bland; light; pale","好吃":"hǎochī|delicious; tasty","难吃":"nánchī|bad-tasting",
+"糖":"táng|sugar; candy","盐":"yán|salt","酱油":"jiàngyóu|soy sauce","醋":"cù|vinegar","油":"yóu|oil; oily",
+"碗":"wǎn|bowl","盘子":"pánzi|plate; dish","杯子":"bēizi|cup; glass","筷子":"kuàizi|chopsticks",
+"勺子":"sháozi|spoon; ladle","叉子":"chāzi|fork","刀":"dāo|knife","瓶子":"píngzi|bottle",
+"袋子":"dàizi|bag; sack","钱包":"qiánbāo|wallet; purse","背包":"bēibāo|backpack","手套":"shǒutào|gloves",
+"围巾":"wéijīn|scarf","眼镜":"yǎnjìng|glasses; spectacles","太阳镜":"tàiyángjìng|sunglasses",
+"化妆品":"huàzhuāngpǐn|cosmetics; makeup","香水":"xiāngshuǐ|perfume","镜子":"jìngzi|mirror",
+"梳子":"shūzi|comb","毛笔":"máobǐ|Chinese writing brush","铅笔":"qiānbǐ|pencil","橡皮":"xiàngpí|eraser",
+"尺子":"chǐzi|ruler","纸":"zhǐ|paper","本子":"běnzi|notebook; exercise book",
+"报纸":"bàozhǐ|newspaper","杂志":"zázhì|magazine","小说":"xiǎoshuō|novel; fiction",
+"网":"wǎng|net; network; internet","密码":"mìmǎ|password; code","账号":"zhànghào|account (username)",
+"下载":"xiàzài|to download","上传":"shàngchuán|to upload","搜索":"sōusuǒ|to search",
+"聊天":"liáotiān|to chat","发短信":"fāduǎnxìn|to send a text message","微信":"wēixìn|WeChat",
+"支付宝":"zhīfùbǎo|Alipay","现金":"xiànjīn|cash","信用卡":"xìnyòngkǎ|credit card","银行卡":"yínhángkǎ|bank card",
+"收据":"shōujù|receipt","发票":"fāpiào|invoice; receipt","零钱":"língqián|small change; coins",
+"份":"fèn|portion; share; measure word (for documents)","条":"tiáo|strip; measure word (for long thin things)",
+"件":"jiàn|piece; item; measure word (for clothes/events)","双":"shuāng|pair; double; measure word (for pairs)",
+"只":"zhī|measure word (for animals/one of a pair)","位":"wèi|measure word (for people, polite)",
+"本":"běn|measure word (for books)","把":"bǎ|measure word (for things with handles); preposition",
+"辆":"liàng|measure word (for vehicles)","台":"tái|measure word (for machines); platform; stage",
+"句":"jù|measure word (for sentences)","首":"shǒu|measure word (for poems/songs); head; first",
+"节":"jié|section; festival; measure word (for classes/segments)","层":"céng|layer; floor; story",
+"座":"zuò|measure word (for buildings/mountains); seat","间":"jiān|measure word (for rooms); between",
+"所":"suǒ|measure word (for buildings); place","家":"jiā|measure word (for businesses/families); home",
+"种":"zhǒng|kind; type; measure word (for types)","次":"cì|measure word (for occurrences); time; order",
+"遍":"biàn|measure word (for actions done from start to finish); time",
+"顿":"dùn|measure word (for meals); to pause","杯":"bēi|measure word (for drinks); cup",
+"瓶":"píng|measure word (for bottles); bottle",
+"着":"zhe|verb particle indicating ongoing action","过":"guò|verb particle indicating experience",
+"得":"de|structural particle (complement marker)","地":"de|structural particle (adverbial marker)"
+
+};
+// 705 entries (CC-CEDICT style)
+
+function lookupLocal(hanzi) {
+  const entry = DICT[hanzi];
+  if (entry) {
+    const [pinyin, english] = entry.split('|');
+    return { hanzi, pinyin, english };
+  }
+  return null;
+}
+
+// Google Translate lookup for words not in local dictionary
+async function lookupGoogleTranslate(hanzi) {
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh-CN&tl=en&dt=t&dt=rm&q=${encodeURIComponent(hanzi)}`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('Network error');
+    const data = await resp.json();
+    // data[0][0][0] = English translation
+    // data[0][0][1] = original Chinese
+    // data[0][1][3] = pinyin (romanization) — from dt=rm
+    const english = data?.[0]?.[0]?.[0]?.toLowerCase() || '';
+    // Pinyin is in a different spot depending on response structure
+    let pinyin = '';
+    // Try to get romanization from the rm section
+    if (data?.[0]) {
+      for (const block of data[0]) {
+        if (block?.[3]) { pinyin = block[3]; break; }
+      }
+    }
+    if (!pinyin && data?.[0]?.[1]?.[3]) pinyin = data[0][1][3];
+    
+    if (english && english !== hanzi) {
+      return { hanzi, pinyin: pinyin || '?', english };
+    }
+    return null;
+  } catch (err) {
+    return null;
+  }
+}
+
+// Combined lookup: local dict first, then Google Translate
+async function lookupWord(hanzi) {
+  const local = lookupLocal(hanzi);
+  if (local) return local;
+  return await lookupGoogleTranslate(hanzi);
+}
+
+// Enter key to submit
+['m-hanzi', 'm-pinyin', 'm-english'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') lookupAndAdd();
+  });
+});
+
+// =================== FILE IMPORT ===================
+const importDropZone = document.getElementById('import-drop-zone');
+importDropZone.addEventListener('dragover', e => { e.preventDefault(); importDropZone.classList.add('dragover'); });
+importDropZone.addEventListener('dragleave', () => importDropZone.classList.remove('dragover'));
+importDropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  importDropZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleImportFile(e.dataTransfer.files[0]);
+});
+document.getElementById('import-file-input').addEventListener('change', e => {
+  if (e.target.files[0]) handleImportFile(e.target.files[0]);
+  e.target.value = '';
+});
+
+let importedWords = [];
+
+async function handleImportFile(file) {
+  const info = document.getElementById('import-file-info');
+  const status = document.getElementById('import-status');
+  const preview = document.getElementById('import-preview');
+  preview.style.display = 'none';
+  importedWords = [];
+
+  const ext = file.name.split('.').pop().toLowerCase();
+  const isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext);
+  const isDocx = ext === 'docx' || ext === 'doc';
+  const isText = ['txt', 'csv', 'md', 'tsv'].includes(ext);
+
+  info.innerHTML = `<span style="color:var(--hud-green);">📄 ${file.name} <span style="opacity:0.5;">(${(file.size / 1024).toFixed(1)} KB)</span></span>`;
+  info.style.display = 'block';
+
+  if (isImage) {
+    status.innerHTML = '<span style="color:var(--hud-cyan);">SCANNING IMAGE FOR CHINESE TEXT...</span>';
+    try {
+      const b64 = await fileToBase64(file);
+      const mt = file.type || 'image/jpeg';
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514', max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: mt, data: b64 } },
+              { type: 'text', text: 'Extract ALL Chinese words/vocabulary visible in this image. Return ONLY a JSON array of strings, e.g. ["你好","谢谢","再见"]. No markdown, no explanation, just the JSON array of Chinese words.' }
+            ]
+          }]
+        })
+      });
+      if (!resp.ok) throw new Error('API error');
+      const data = await resp.json();
+      const text = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+      const clean = text.replace(/```json|```/g, '').trim();
+      const match = clean.match(/\[[\s\S]*\]/);
+      if (match) {
+        const arr = JSON.parse(match[0]);
+        const chineseWords = arr.filter(w => typeof w === 'string' && /[\u4e00-\u9fff]/.test(w));
+        processExtractedChinese(chineseWords.map(w => ({hanzi: w, pinyin: null})), status);
+      } else {
+        throw new Error('No words found');
+      }
+    } catch (err) {
+      status.innerHTML = '<span class="error">⚠ COULD NOT SCAN IMAGE — Image scanning requires network access.<br>TIP: Type the Chinese words from the image into the fields above instead.</span>';
+    }
+  } else if (isDocx) {
+    status.innerHTML = '<span style="color:var(--hud-cyan);">READING WORD DOCUMENT...</span>';
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      const rawText = result.value;
+      const extracted = extractChineseFromText(rawText);
+      processExtractedChinese(extracted, status);
+    } catch (err) {
+      status.innerHTML = '<span class="error">⚠ COULD NOT READ DOCX FILE</span>';
+    }
+  } else if (isText) {
+    status.innerHTML = '<span style="color:var(--hud-cyan);">READING TEXT FILE...</span>';
+    try {
+      const text = await readFileText(file);
+      const extracted = extractChineseFromText(text);
+      processExtractedChinese(extracted, status);
+    } catch (err) {
+      status.innerHTML = '<span class="error">⚠ COULD NOT READ FILE</span>';
+    }
+  } else {
+    status.innerHTML = '<span class="error">⚠ UNSUPPORTED FILE TYPE</span>';
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result.split(',')[1]);
+    r.onerror = () => rej(new Error('Read failed'));
+    r.readAsDataURL(file);
+  });
+}
+
+function readFileText(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = () => rej(new Error('Read failed'));
+    r.readAsText(file);
+  });
+}
+
+function extractChineseFromText(text) {
+  const results = [];
+  const seen = new Set();
+  const headers = new Set(['中文','英文','句子','拼音','词汇','生词','汉字','汉语','词语','意思','例句','课文']);
+
+  const lines = text.split('\n');
+  lines.forEach(line => {
+    // Strip pinyin in parentheses and all non-Chinese characters
+    const stripped = line.replace(/[\(（][^)）]*[\)）]/g, '').trim();
+    // Extract Chinese character sequences
+    const matches = stripped.match(/[\u4e00-\u9fff\u3400-\u4dbf]+/g);
+    if (matches) {
+      matches.forEach(hanzi => {
+        if (!seen.has(hanzi) && !headers.has(hanzi) && hanzi.length <= 8) {
+          seen.add(hanzi);
+          results.push({ hanzi, pinyin: null });
+        }
+      });
+    }
+  });
+
+  return results;
+}
+
+async function processExtractedChinese(chineseItems, status) {
+  const items = chineseItems.map(item =>
+    typeof item === 'string' ? { hanzi: item, pinyin: null } : item
+  );
+
+  if (items.length === 0) {
+    status.innerHTML = '<span class="error">⚠ NO CHINESE WORDS FOUND IN FILE</span>';
+    return;
+  }
+
+  const existing = new Set(VOCAB.map(v => v.hanzi));
+  const found = [];
+  const needTranslate = [];
+
+  items.forEach(({ hanzi }) => {
+    if (existing.has(hanzi)) return;
+    const local = lookupLocal(hanzi);
+    if (local) {
+      found.push(local);
+    } else {
+      needTranslate.push(hanzi);
+    }
+  });
+
+  // Google Translate for words not in local dict
+  if (needTranslate.length > 0) {
+    status.innerHTML = `<span style="color:var(--hud-cyan);">${found.length} from local dict · Looking up ${needTranslate.length} via Google Translate...</span>`;
+    for (const hanzi of needTranslate) {
+      const result = await lookupGoogleTranslate(hanzi);
+      if (result && result.english) found.push(result);
+    }
+  }
+
+  const alreadyCount = items.filter(w => existing.has(w.hanzi)).length;
+  const notFound = needTranslate.filter(h => !found.some(f => f.hanzi === h));
+
+  if (found.length === 0 && notFound.length === 0) {
+    status.innerHTML = '<span style="color:var(--hud-amber);">ALL WORDS ALREADY IN DATABASE</span>';
+    return;
+  }
+
+  let msg = '';
+  if (found.length > 0) msg += `<span class="success">${found.length} WORDS FOUND</span>`;
+  if (alreadyCount > 0) msg += `${msg ? ' · ' : ''}<span style="color:var(--hud-amber);">${alreadyCount} already in quiz</span>`;
+  if (notFound.length > 0) msg += `${msg ? '<br>' : ''}<span style="color:rgba(200,204,216,0.4);font-size:0.8rem;">Could not look up: ${notFound.join(', ')}</span>`;
+  status.innerHTML = msg;
+
+  if (found.length > 0) {
+    importedWords = found;
+    const list = document.getElementById('import-preview-list');
+    list.innerHTML = '';
+    found.forEach((w, i) => {
+      const row = document.createElement('div');
+      row.className = 'preview-row';
+      row.innerHTML = `
+        <input type="checkbox" id="imp-${i}" checked/>
+        <span class="preview-hanzi">${w.hanzi}</span>
+        <span class="preview-pinyin">${w.pinyin}</span>
+        <span class="preview-def">${w.english}</span>`;
+      list.appendChild(row);
+    });
+    document.getElementById('import-preview').style.display = 'block';
+  }
+}
+
+function confirmImport() {
+  const checkboxes = document.querySelectorAll('#import-preview-list input[type=checkbox]');
+  const existing = new Set(VOCAB.map(v => v.hanzi));
+  let added = 0;
+
+  importedWords.forEach((w, i) => {
+    if (!checkboxes[i] || !checkboxes[i].checked) return;
+    if (existing.has(w.hanzi)) return;
+    VOCAB.push(w);
+    existing.add(w.hanzi);
+    added++;
+  });
+
+  if (added > 0) {
+    document.getElementById('import-preview').style.display = 'none';
+    document.getElementById('import-status').innerHTML = `<span class="success">✓ ${added} UNIT${added !== 1 ? 'S' : ''} DEPLOYED</span>`;
+    updateVocabCount();
+    showToast(`⊕ ${added} UNIT${added !== 1 ? 'S' : ''} DEPLOYED TO DATABASE`);
+  }
+}
+
+// =================== MANAGE / REMOVE ===================
+let markedForRemoval = new Set();
+
+function openManage() {
+  markedForRemoval = new Set();
+  document.getElementById('manage-search').value = '';
+  document.getElementById('manage-overlay').classList.add('open');
+  renderManageList();
+}
+
+function closeManage() {
+  document.getElementById('manage-overlay').classList.remove('open');
+}
+
+document.getElementById('manage-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('manage-overlay')) closeManage();
+});
+
+function renderManageList() {
+  const q = document.getElementById('manage-search').value.toLowerCase().trim();
+  const filtered = VOCAB.filter(w =>
+    !q || w.hanzi.includes(q) || w.pinyin.toLowerCase().includes(q) || w.english.toLowerCase().includes(q)
+  );
+  const list = document.getElementById('manage-list');
+  list.innerHTML = '';
+  filtered.forEach(w => {
+    const row = document.createElement('div');
+    row.className = 'manage-row' + (markedForRemoval.has(w.hanzi) ? ' marked' : '');
+    row.innerHTML = `
+      <input type="checkbox" ${markedForRemoval.has(w.hanzi) ? 'checked' : ''}
+        onchange="toggleMark('${w.hanzi.replace(/'/g, "\\'")}', this.checked)" onclick="event.stopPropagation()"/>
+      <span class="manage-row-hanzi">${w.hanzi}</span>
+      <span class="manage-row-pinyin">${w.pinyin}</span>
+      <span class="manage-row-eng">${w.english}</span>`;
+    row.addEventListener('click', () => {
+      const cb = row.querySelector('input');
+      cb.checked = !cb.checked;
+      toggleMark(w.hanzi, cb.checked);
+    });
+    list.appendChild(row);
+  });
+  updateManageCount();
+}
+
+function toggleMark(hanzi, checked) {
+  if (checked) markedForRemoval.add(hanzi);
+  else markedForRemoval.delete(hanzi);
+  document.querySelectorAll('.manage-row').forEach(row => {
+    const h = row.querySelector('.manage-row-hanzi');
+    if (h && h.textContent === hanzi) row.classList.toggle('marked', checked);
+  });
+  updateManageCount();
+}
+
+function updateManageCount() {
+  document.getElementById('manage-count').textContent = `${markedForRemoval.size} / ${VOCAB.length} MARKED`;
+  const btn = document.getElementById('remove-btn');
+  btn.disabled = markedForRemoval.size === 0;
+  btn.textContent = markedForRemoval.size > 0
+    ? `✕ REMOVE ${markedForRemoval.size} UNIT${markedForRemoval.size > 1 ? 'S' : ''}`
+    : '✕ REMOVE SELECTED';
+}
+
+function manageSelectAll() {
+  const q = document.getElementById('manage-search').value.toLowerCase().trim();
+  VOCAB.filter(w => !q || w.hanzi.includes(q) || w.pinyin.toLowerCase().includes(q) || w.english.toLowerCase().includes(q))
+    .forEach(w => markedForRemoval.add(w.hanzi));
+  renderManageList();
+}
+
+function manageSelectNone() {
+  markedForRemoval.clear();
+  renderManageList();
+}
+
+function confirmRemove() {
+  if (markedForRemoval.size === 0) return;
+  const count = markedForRemoval.size;
+  for (let i = VOCAB.length - 1; i >= 0; i--) {
+    if (markedForRemoval.has(VOCAB[i].hanzi)) VOCAB.splice(i, 1);
+  }
+  closeManage();
+  updateVocabCount();
+  showToast(`✕ ${count} UNIT${count > 1 ? 'S' : ''} PURGED FROM DATABASE`);
+}
+
+// =================== INIT ===================
+loadVocab();
+</script>
+</body>
+</html>
