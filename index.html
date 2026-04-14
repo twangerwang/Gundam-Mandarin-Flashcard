@@ -1800,41 +1800,26 @@ function updateVocabCount() {
   saveVocab();
 }
 
-// =================== PERSISTENT STORAGE ===================
-let storageReady = false;
+// =================== PERSISTENT STORAGE (localStorage) ===================
+const STORAGE_KEY = 'gundamvocab';
 
 function saveVocab() {
-  if (!storageReady) return;
   try {
-    window.storage.set('gundamvocab', JSON.stringify(VOCAB)).catch(() => {});
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(VOCAB));
   } catch (e) {}
 }
 
-async function loadVocab() {
-  // Poll for storage API availability
-  for (let i = 0; i < 20; i++) {
-    if (window.storage && typeof window.storage.get === 'function') {
-      storageReady = true;
-      break;
-    }
-    await new Promise(r => setTimeout(r, 150));
-  }
-
-  if (storageReady) {
-    try {
-      const result = await window.storage.get('gundamvocab');
-      if (result && result.value) {
-        const saved = JSON.parse(result.value);
-        if (Array.isArray(saved)) {
-          VOCAB.length = 0;
-          saved.forEach(w => VOCAB.push(w));
-        }
+function loadVocab() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        VOCAB.length = 0;
+        parsed.forEach(w => VOCAB.push(w));
       }
-    } catch (e) {
-      // Key doesn't exist yet — first run, keep DEFAULT_VOCAB
     }
-  }
-
+  } catch (e) {}
   updateVocabCount();
 }
 
