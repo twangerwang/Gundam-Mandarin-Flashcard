@@ -1904,7 +1904,7 @@ async function lookupAndAdd() {
 
   // If all 3 fields filled, add directly
   if (manualPinyin && manualEnglish) {
-    VOCAB.push({ hanzi, pinyin: manualPinyin, english: manualEnglish });
+    VOCAB.push({ hanzi, pinyin: manualPinyin, english: correctSpelling(manualEnglish) });
     document.getElementById('m-hanzi').value = '';
     document.getElementById('m-pinyin').value = '';
     document.getElementById('m-english').value = '';
@@ -1914,14 +1914,12 @@ async function lookupAndAdd() {
     return;
   }
 
-  // Try auto-lookup for missing fields
-  const local = lookupLocal(hanzi);
-  let pinyin = manualPinyin || (local ? local.pinyin : '');
-  let english = manualEnglish || (local ? local.english : '');
+  // Try auto-lookup for missing fields via Google Translate
+  let pinyin = manualPinyin || '';
+  let english = manualEnglish || '';
 
-  // If still missing info, try Google Translate
   if (!pinyin || !english) {
-    status.innerHTML = '<span style="color:var(--hud-cyan);">LOOKING UP...</span>';
+    status.innerHTML = '<span style="color:var(--hud-cyan);">LOOKING UP VIA GOOGLE TRANSLATE...</span>';
     const gt = await lookupGoogleTranslate(hanzi);
     if (gt) {
       if (!pinyin) pinyin = gt.pinyin;
@@ -1930,7 +1928,7 @@ async function lookupAndAdd() {
   }
 
   if (pinyin && english) {
-    VOCAB.push({ hanzi, pinyin, english });
+    VOCAB.push({ hanzi, pinyin, english: correctSpelling(english) });
     document.getElementById('m-hanzi').value = '';
     document.getElementById('m-pinyin').value = '';
     document.getElementById('m-english').value = '';
@@ -1968,30 +1966,15 @@ async function bulkLookup() {
 
   const status = document.getElementById('bulk-status');
   let added = 0;
-  const needTranslate = [];
 
-  // Local dict first (instant)
-  newWords.forEach(hanzi => {
-    const local = lookupLocal(hanzi);
-    if (local && !existing.has(hanzi)) {
-      VOCAB.push(local);
+  // Look up all words via Google Translate
+  status.innerHTML = `<span style="color:var(--hud-cyan);">Looking up ${newWords.length} words via Google Translate...</span>`;
+  for (const hanzi of newWords) {
+    const result = await lookupGoogleTranslate(hanzi);
+    if (result && result.english && !existing.has(hanzi)) {
+      VOCAB.push(result);
       existing.add(hanzi);
       added++;
-    } else if (!local) {
-      needTranslate.push(hanzi);
-    }
-  });
-
-  // Google Translate for the rest
-  if (needTranslate.length > 0) {
-    status.innerHTML = `<span style="color:var(--hud-cyan);">${added} from local dict · Looking up ${needTranslate.length} via Google Translate...</span>`;
-    for (const hanzi of needTranslate) {
-      const result = await lookupGoogleTranslate(hanzi);
-      if (result && result.english && !existing.has(hanzi)) {
-        VOCAB.push(result);
-        existing.add(hanzi);
-        added++;
-      }
     }
   }
 
@@ -2009,78 +1992,6 @@ async function bulkLookup() {
 }
 
 // =================== LOCAL DICTIONARY ===================
-const DICT = {
-"你好":"nǐ hǎo|hello; hi","谢谢":"xièxie|to thank; thanks","再见":"zàijiàn|goodbye","是":"shì|to be; is; yes","不":"bù|not; no","我":"wǒ|I; me","你":"nǐ|you (singular)","他":"tā|he; him","她":"tā|she; her","它":"tā|it","们":"men|plural suffix for pronouns","的":"de|possessive particle; of","了":"le|completed action marker","在":"zài|at; in; to exist","有":"yǒu|to have; there is","没有":"méiyǒu|to not have; there is not","这":"zhè|this; these","那":"nà|that; those","什么":"shénme|what; something","谁":"shuí|who; whom","哪":"nǎ|which; where","哪里":"nǎlǐ|where; wherever","怎么":"zěnme|how; why","为什么":"wèishénme|why","多少":"duōshao|how much; how many","几":"jǐ|how many; several","很":"hěn|very; quite","也":"yě|also; too","都":"dōu|all; both; even","和":"hé|and; with; harmonious","人":"rén|person; people","大":"dà|big; large; great","小":"xiǎo|small; little; young","多":"duō|many; much; more","少":"shǎo|few; little; less","好":"hǎo|good; well; fine","吃":"chī|to eat","喝":"hē|to drink","看":"kàn|to look at; to watch; to read","听":"tīng|to listen; to hear","说":"shuō|to speak; to say","读":"dú|to read aloud","写":"xiě|to write","学":"xué|to learn; to study","做":"zuò|to do; to make","去":"qù|to go","来":"lái|to come","回":"huí|to return; to go back","走":"zǒu|to walk; to go; to leave","坐":"zuò|to sit; to travel by","住":"zhù|to live; to stay; to reside","买":"mǎi|to buy; to purchase","叫":"jiào|to call; to be called","想":"xiǎng|to think; to want; to miss","知道":"zhīdào|to know; to be aware of","认识":"rènshi|to know (a person); to recognize","喜欢":"xǐhuan|to like; to be fond of","爱":"ài|to love; love","工作":"gōngzuò|to work; work; job","学习":"xuéxí|to study; to learn","学校":"xuéxiào|school","学生":"xuésheng|student; pupil","老师":"lǎoshī|teacher","医生":"yīshēng|doctor; physician","朋友":"péngyou|friend","同学":"tóngxué|classmate; fellow student","家":"jiā|home; family; (measure word)","爸爸":"bàba|father; dad","妈妈":"māma|mother; mom","儿子":"érzi|son","女儿":"nǚér|daughter","先生":"xiānsheng|Mr.; sir; husband; teacher","小姐":"xiǎojiě|Miss; young lady","今天":"jīntiān|today","昨天":"zuótiān|yesterday","明天":"míngtiān|tomorrow","现在":"xiànzài|now; at present","时候":"shíhou|time; moment; period","上午":"shàngwǔ|morning; a.m.","下午":"xiàwǔ|afternoon; p.m.","晚上":"wǎnshang|evening; night","点":"diǎn|o'clock; dot; point","分钟":"fēnzhōng|minute","年":"nián|year","月":"yuè|month; moon","日":"rì|day; sun; date","星期":"xīngqī|week","号":"hào|number; date (of the month)","岁":"suì|year (of age)","水":"shuǐ|water","茶":"chá|tea","米饭":"mǐfàn|cooked rice","菜":"cài|dish; vegetable","苹果":"píngguǒ|apple","钱":"qián|money; coin","块":"kuài|yuan (informal); piece; lump","书":"shū|book; letter","电脑":"diànnǎo|computer","电视":"diànshì|television; TV","电话":"diànhuà|telephone; phone call","手机":"shǒujī|cellphone; mobile phone","桌子":"zhuōzi|table; desk","椅子":"yǐzi|chair","衣服":"yīfu|clothes; clothing","天气":"tiānqì|weather","下雨":"xiàyǔ|to rain","猫":"māo|cat","狗":"gǒu|dog","中国":"zhōngguó|China","北京":"běijīng|Beijing","但是":"dànshì|but; however","因为":"yīnwèi|because; owing to","所以":"suǒyǐ|so; therefore; as a result","如果":"rúguǒ|if; in case","虽然":"suīrán|although; even though","已经":"yǐjīng|already","正在":"zhèngzài|in the process of; currently","一定":"yīdìng|surely; certainly; fixed","可以":"kěyǐ|can; may; possible","可能":"kěnéng|maybe; possible; probably","能":"néng|can; to be able to","会":"huì|can; to know how to; meeting","应该":"yīnggāi|should; ought to","必须":"bìxū|must; have to","需要":"xūyào|to need; to require; needs","开始":"kāishǐ|to begin; to start; beginning","结束":"jiéshù|to end; to finish","准备":"zhǔnbèi|to prepare; preparation","帮助":"bāngzhù|to help; help; assistance","等":"děng|to wait; etc.","找":"zhǎo|to look for; to find; to seek","玩":"wán|to play; to have fun; to enjoy","跑":"pǎo|to run","走路":"zǒulù|to walk; to go on foot","起床":"qǐchuáng|to get up; to get out of bed","睡觉":"shuìjiào|to sleep; to go to bed","穿":"chuān|to wear; to put on; to pierce","戴":"dài|to wear (hat/glasses/jewelry)","给":"gěi|to give; for; to","告诉":"gàosu|to tell; to inform","要":"yào|to want; will; going to; important","让":"ràng|to let; to allow; to make","觉得":"juéde|to feel; to think","希望":"xīwàng|to hope; hope; wish","相信":"xiāngxìn|to believe; to trust","担心":"dānxīn|to worry; worried; anxious","害怕":"hàipà|to be afraid; to fear","高兴":"gāoxìng|happy; glad; willing","开心":"kāixīn|happy; joyous","生气":"shēngqì|angry; to get angry","累":"lèi|tired; weary","忙":"máng|busy","快":"kuài|fast; quick; soon","慢":"màn|slow; slowly","新":"xīn|new; fresh","旧":"jiù|old (of things); former","长":"cháng|long; length","短":"duǎn|short; brief","高":"gāo|tall; high","远":"yuǎn|far; distant","近":"jìn|near; close","贵":"guì|expensive; noble","便宜":"piányi|cheap; inexpensive","漂亮":"piàoliang|beautiful; pretty; nice","容易":"róngyì|easy; likely","难":"nán|difficult; hard","重要":"zhòngyào|important; significant","哥哥":"gēge|older brother","姐姐":"jiějie|older sister","弟弟":"dìdi|younger brother","妹妹":"mèimei|younger sister","丈夫":"zhàngfu|husband","妻子":"qīzi|wife","孩子":"háizi|child; children","男":"nán|male; man","女":"nǚ|female; woman","身体":"shēntǐ|body; health","头":"tóu|head; top; first","眼睛":"yǎnjing|eye; eyes","脸":"liǎn|face","手":"shǒu|hand","脚":"jiǎo|foot; leg","鼻子":"bízi|nose","耳朵":"ěrduo|ear","嘴":"zuǐ|mouth","鱼":"yú|fish","鸡蛋":"jīdàn|egg; chicken egg","牛奶":"niúnǎi|milk; cow's milk","水果":"shuǐguǒ|fruit","西瓜":"xīguā|watermelon","咖啡":"kāfēi|coffee","啤酒":"píjiǔ|beer","公共汽车":"gōnggòngqìchē|bus; public bus","出租车":"chūzūchē|taxi","地铁":"dìtiě|subway; metro","飞机":"fēijī|airplane; aircraft","火车":"huǒchē|train","船":"chuán|boat; ship; vessel","自行车":"zìxíngchē|bicycle; bike","路":"lù|road; path; route","医院":"yīyuàn|hospital","商店":"shāngdiàn|shop; store","饭店":"fàndiàn|restaurant; hotel","银行":"yínháng|bank","机场":"jīchǎng|airport","火车站":"huǒchēzhàn|train station","教室":"jiàoshì|classroom","图书馆":"túshūguǎn|library","公司":"gōngsī|company; corporation","公园":"gōngyuán|park","超市":"chāoshì|supermarket","左":"zuǒ|left","右":"yòu|right","前":"qián|front; before; ago","后":"hòu|behind; after; later","上":"shàng|up; above; previous; to go up","下":"xià|down; below; next; to go down","里":"lǐ|inside; in; lining","外":"wài|outside; foreign; external","旁边":"pángbiān|beside; next to","对面":"duìmiàn|opposite; across from","然后":"ránhòu|then; after that; afterwards","而且":"érqiě|moreover; and also; furthermore","还是":"háishi|or (in questions); still","或者":"huòzhě|or; perhaps; maybe","除了":"chúle|except for; besides; apart from","其实":"qíshí|actually; in fact; as a matter of fact","终于":"zhōngyú|at last; finally; eventually","突然":"tūrán|suddenly; unexpected","一直":"yìzhí|always; continuously; straight","经常":"jīngcháng|often; frequently; regularly","有时候":"yǒushíhou|sometimes; at times","刚才":"gāngcái|just now; a moment ago","马上":"mǎshàng|immediately; right away; at once","又":"yòu|again (past); also","再":"zài|again (future); more; then","还":"hái|still; yet; also; even more","才":"cái|only then; just; only","就":"jiù|then; right away; as early as","把":"bǎ|preposition for disposal","被":"bèi|passive marker; by","从":"cóng|from; since","到":"dào|to arrive; to; until","向":"xiàng|toward; to face","离":"lí|away from; to leave","跟":"gēn|with; to follow; and","对":"duì|correct; toward; for; pair","关于":"guānyú|about; regarding; concerning","按照":"ànzhào|according to; in accordance with","通过":"tōngguò|to pass through; by means of; via","打算":"dǎsuàn|to plan; to intend; plan","决定":"juédìng|to decide; decision","选择":"xuǎnzé|to choose; to select; choice","同意":"tóngyì|to agree; to consent","注意":"zhùyì|to pay attention to; attention","记得":"jìde|to remember","忘记":"wàngjì|to forget","明白":"míngbai|to understand; clear; obvious","习惯":"xíguàn|habit; to be used to; custom","参加":"cānjiā|to participate; to join; to attend","解决":"jiějué|to solve; to resolve; to settle","影响":"yǐngxiǎng|to influence; to affect; influence","保护":"bǎohù|to protect; protection","提高":"tígāo|to improve; to raise; to enhance","努力":"nǔlì|to work hard; to strive; effort","成功":"chénggōng|to succeed; success; successful","变化":"biànhuà|change; to change; variation","发展":"fāzhǎn|to develop; development","环境":"huánjìng|environment; surroundings","社会":"shèhuì|society; social","文化":"wénhuà|culture; civilization","历史":"lìshǐ|history; past events","经济":"jīngjì|economy; economic","健康":"jiànkāng|health; healthy","安全":"ānquán|safe; safety; security","幸福":"xìngfú|happiness; happy; blessed","关系":"guānxi|relationship; connection; to matter","机会":"jīhuì|opportunity; chance","经验":"jīngyàn|experience","兴趣":"xìngqù|interest (in something)","音乐":"yīnyuè|music","电影":"diànyǐng|movie; film","运动":"yùndòng|sports; exercise; to exercise","游戏":"yóuxì|game","比赛":"bǐsài|competition; match; to compete","照片":"zhàopiàn|photo; photograph; picture","新闻":"xīnwén|news","节目":"jiémù|program; show","足球":"zúqiú|soccer; football","篮球":"lánqiú|basketball","游泳":"yóuyǒng|to swim; swimming","跑步":"pǎobù|to jog; to run","散步":"sànbù|to take a walk; to go for a stroll","唱歌":"chànggē|to sing (a song)","跳舞":"tiàowǔ|to dance","画":"huà|to draw; to paint; painting","春节":"chūnjié|Spring Festival; Chinese New Year","中秋节":"zhōngqiūjié|Mid-Autumn Festival","生日":"shēngrì|birthday","名字":"míngzi|name","中文":"zhōngwén|Chinese (written language)","汉语":"hànyǔ|Chinese language; Mandarin","外语":"wàiyǔ|foreign language","英文":"yīngwén|English (written)","字":"zì|character; word; letter","词":"cí|word; term","意思":"yìsi|meaning; idea; opinion","不但":"búdàn|not only","无论":"wúlùn|regardless of; no matter what","只要":"zhǐyào|as long as; provided that","尽管":"jǐnguǎn|even though; despite; feel free to","既然":"jìrán|since; now that; given that","否则":"fǒuzé|otherwise; or else","甚至":"shènzhì|even (to the point of)","尤其":"yóuqí|especially; particularly","另外":"lìngwài|in addition; besides; other","总之":"zǒngzhī|in short; in a word","何况":"hékuàng|let alone; much less","根据":"gēnjù|according to; based on; basis","随着":"suízhe|along with; in the wake of","渐渐":"jiànjiàn|gradually; little by little","立刻":"lìkè|immediately; at once; right away","大概":"dàgài|probably; roughly; approximate","恐怕":"kǒngpà|I'm afraid that; perhaps","居然":"jūrán|unexpectedly; to one's surprise","果然":"guǒrán|as expected; sure enough","总是":"zǒngshì|always; invariably","往往":"wǎngwǎng|often; frequently; more often than not","偶尔":"ǒuěr|occasionally; once in a while","几乎":"jīhū|almost; nearly","以前":"yǐqián|before; formerly; previously","以后":"yǐhòu|after; afterwards; later","之间":"zhījiān|between; among","附近":"fùjìn|nearby; in the vicinity","世界":"shìjiè|world","国家":"guójiā|country; nation; state","城市":"chéngshì|city","地方":"dìfang|place; area; region","东西":"dōngxi|thing; stuff","事情":"shìqing|matter; affair; thing","办法":"bànfǎ|method; way; means","条件":"tiáojiàn|condition; requirement","情况":"qíngkuàng|situation; circumstances","原因":"yuányīn|reason; cause","结果":"jiéguǒ|result; outcome; as a result","目的":"mùdì|purpose; aim; goal","感觉":"gǎnjué|feeling; to feel; sense","态度":"tàidu|attitude; manner","数学":"shùxué|mathematics; math","科学":"kēxué|science; scientific","艺术":"yìshù|art; fine arts","技术":"jìshù|technology; technique; skill","教育":"jiàoyù|education; to educate","生活":"shēnghuó|life; to live; livelihood","爱好":"àihào|hobby; interest; fond of","梦想":"mèngxiǎng|dream; to dream of","未来":"wèilái|future; tomorrow; upcoming","过去":"guòqù|past; former; to go over","翻译":"fānyì|to translate; translation; interpreter","词典":"cídiǎn|dictionary","打工":"dǎgōng|to work (part-time/manual); temp job","赚钱":"zhuànqián|to earn money; to make money","工资":"gōngzī|salary; wages; pay","职业":"zhíyè|occupation; profession; career","经理":"jīnglǐ|manager; director","同事":"tóngshì|colleague; coworker","面试":"miànshì|interview; to interview","简历":"jiǎnlì|resume; CV","交通":"jiāotōng|traffic; transportation","停车":"tíngchē|to park; to stop (vehicle)","加油":"jiāyóu|to refuel; come on! (encouragement)","堵车":"dǔchē|traffic jam; traffic congestion","旅游":"lǚyóu|to travel; tourism; trip","旅行":"lǚxíng|to travel; journey; trip","旅游团":"lǚyóutuán|tour group; tour party","导游":"dǎoyóu|tour guide","景点":"jǐngdiǎn|scenic spot; tourist attraction","博物馆":"bówùguǎn|museum","护照":"hùzhào|passport","签证":"qiānzhèng|visa","行李":"xíngli|luggage; baggage","地图":"dìtú|map","门票":"ménpiào|admission ticket; entrance ticket","订票":"dìngpiào|to book tickets; to reserve tickets","订":"dìng|to book; to reserve; to subscribe","出发":"chūfā|to set out; to depart","到达":"dàodá|to arrive; to reach","出国":"chūguó|to go abroad","回国":"huíguó|to return to one's country","参观":"cānguān|to visit (a place); to tour","游览":"yóulǎn|to tour; to go sightseeing","拍照":"pāizhào|to take a photo; to photograph","爬山":"páshān|to climb a mountain; hiking","外地":"wàidì|other places; another part of the country","外国":"wàiguó|foreign country","宾馆":"bīnguǎn|hotel; guesthouse","酒店":"jiǔdiàn|hotel; restaurant","房间":"fángjiān|room","海边":"hǎibiān|seaside; seashore","沙滩":"shātān|beach; sandy beach","岛":"dǎo|island","森林":"sēnlín|forest","山":"shān|mountain; hill","河":"hé|river","海":"hǎi|sea; ocean","天":"tiān|sky; day; heaven","地":"dì|earth; ground; land","花":"huā|flower; to spend","树":"shù|tree","风":"fēng|wind","云":"yún|cloud","太阳":"tàiyáng|sun","月亮":"yuèliang|moon","星星":"xīngxing|star","春天":"chūntiān|spring (season)","夏天":"xiàtiān|summer","秋天":"qiūtiān|autumn; fall","冬天":"dōngtiān|winter","动物":"dòngwù|animal","植物":"zhíwù|plant","熊猫":"xióngmāo|panda; giant panda","颜色":"yánsè|color","红色":"hóngsè|red","白色":"báisè|white","黑色":"hēisè|black","蓝色":"lánsè|blue","绿色":"lǜsè|green","黄色":"huángsè|yellow","紫色":"zǐsè|purple","橙色":"chéngsè|orange (color)","红":"hóng|red","白":"bái|white","黑":"hēi|black","蓝":"lán|blue","绿":"lǜ|green","黄":"huáng|yellow","紫":"zǐ|purple","灰":"huī|gray","粉":"fěn|pink","校服":"xiàofú|school uniform","裤子":"kùzi|pants; trousers","裙子":"qúnzi|skirt; dress","鞋子":"xiézi|shoes","帽子":"màozi|hat; cap","运动服":"yùndòngfú|sportswear; athletic wear","运动鞋":"yùndòngxié|sneakers; athletic shoes; trainers","皮鞋":"píxié|leather shoes","流行":"liúxíng|popular; fashionable; trendy; to spread","京剧":"jīngjù|Peking opera; Beijing opera","古老":"gǔlǎo|ancient; age-old","剧服":"jùfú|theatrical costume","功夫":"gōngfu|kung fu; skill; time spent","网站":"wǎngzhàn|website","事":"shì|matter; thing; affair; event","音乐会":"yīnyuèhuì|concert; recital","晚会":"wǎnhuì|evening party; soirée; gala","越来越":"yuèláiyuè|more and more; increasingly","出去":"chūqù|to go out; to exit","这些":"zhèxiē|these","快要":"kuàiyào|about to; soon; almost","故事":"gùshi|story; tale; narrative","只有":"zhǐyǒu|only; merely; nothing but","老年人":"lǎoniánrén|elderly person; senior citizen","发现":"fāxiàn|to discover; to find; discovery","表演":"biǎoyǎn|to perform; performance; show","一边":"yìbiān|one side; at the same time","跟着":"gēnzhe|to follow; following","票":"piào|ticket; ballot; note","剧院":"jùyuàn|theater; playhouse","第一次":"dìyīcì|first time; for the first time","看见":"kànjiàn|to see; to catch sight of","年轻人":"niánqīngrén|young person; young people","半场":"bànchǎng|half-time; intermission","礼物":"lǐwù|gift; present","唱片":"chàngpiàn|record; album; vinyl","后台":"hòutái|backstage; behind the scenes","见面":"jiànmiàn|to meet; to see (someone)","休息":"xiūxi|to rest; to take a break; rest","面条":"miàntiáo|noodles","包子":"bāozi|steamed stuffed bun","饺子":"jiǎozi|dumpling; jiaozi","鸡":"jī|chicken","牛肉":"niúròu|beef","猪肉":"zhūròu|pork","肉":"ròu|meat; flesh","蔬菜":"shūcài|vegetable; vegetables","面包":"miànbāo|bread","香蕉":"xiāngjiāo|banana","月饼":"yuèbǐng|mooncake","粽子":"zòngzi|rice dumpling (wrapped in leaves)","家人":"jiārén|family member; family","亲戚":"qīnqi|relative; family relation","一":"yī|one; 1","二":"èr|two; 2","三":"sān|three; 3","四":"sì|four; 4","五":"wǔ|five; 5","六":"liù|six; 6","七":"qī|seven; 7","八":"bā|eight; 8","九":"jiǔ|nine; 9","十":"shí|ten; 10","零":"líng|zero; 0","百":"bǎi|hundred; 100","千":"qiān|thousand; 1000","万":"wàn|ten thousand; 10000","两":"liǎng|two (with measure words); a couple of","进":"jìn|to enter; to go in","出":"chū|to exit; to go out","过":"guò|to pass; to cross; (experience marker)","起来":"qǐlái|to get up; to rise; (indicating upward movement)","回来":"huílái|to come back; to return","出来":"chūlái|to come out; to emerge","进去":"jìnqù|to go in; to enter","回去":"huíqù|to go back; to return","开":"kāi|to open; to start; to drive","关":"guān|to close; to turn off; to concern","拿":"ná|to take; to hold; to seize","放":"fàng|to put; to place; to release","送":"sòng|to send; to deliver; to give (as gift)","接":"jiē|to receive; to pick up; to connect","带":"dài|to bring; to take; to lead; to carry","换":"huàn|to change; to exchange; to switch","洗":"xǐ|to wash; to clean","用":"yòng|to use; to employ; with","试":"shì|to try; to test; exam","搬":"bān|to move; to transport","修":"xiū|to repair; to fix; to build","打扫":"dǎsǎo|to clean; to sweep","长城":"chángchéng|the Great Wall (of China)","故宫":"gùgōng|the Forbidden City; the Palace Museum","外滩":"wàitān|the Bund (in Shanghai)","东方明珠":"dōngfāng míngzhū|Oriental Pearl Tower (Shanghai)","暑假":"shǔjià|summer vacation; summer holiday","寒假":"hánjià|winter vacation; winter holiday","假期":"jiàqī|vacation; holiday; period of leave","假":"jiǎ|fake; false; vacation; holiday","先":"xiān|first; before; earlier; in advance","美国":"měiguó|United States; America","英国":"yīngguó|United Kingdom; England","日本":"rìběn|Japan","德国":"déguó|Germany","法国":"fǎguó|France","意大利":"yìdàlì|Italy","西班牙":"xībānyá|Spain","澳大利亚":"àodàlìyà|Australia","加拿大":"jiānádà|Canada","韩国":"hánguó|South Korea","泰国":"tàiguó|Thailand","印度":"yìndù|India","俄罗斯":"éluósī|Russia","埃及":"āijí|Egypt","巴西":"bāxī|Brazil","墨西哥":"mòxīgē|Mexico","新加坡":"xīnjiāpō|Singapore","马来西亚":"mǎláixīyà|Malaysia","越南":"yuènán|Vietnam","菲律宾":"fēilǜbīn|Philippines","新西兰":"xīnxīlán|New Zealand","瑞士":"ruìshì|Switzerland","荷兰":"hélán|Netherlands","上海":"shànghǎi|Shanghai","伦敦":"lúndūn|London","巴黎":"bālí|Paris","纽约":"niǔyuē|New York","东京":"dōngjīng|Tokyo","首尔":"shǒuěr|Seoul","香港":"xiānggǎng|Hong Kong","台湾":"táiwān|Taiwan","广州":"guǎngzhōu|Guangzhou","深圳":"shēnzhèn|Shenzhen","南京":"nánjīng|Nanjing","西安":"xīān|Xi'an","成都":"chéngdū|Chengdu","杭州":"hángzhōu|Hangzhou","重庆":"chóngqìng|Chongqing","天津":"tiānjīn|Tianjin","武汉":"wǔhàn|Wuhan","苏州":"sūzhōu|Suzhou","悉尼":"xīní|Sydney","多伦多":"duōlúnduō|Toronto","洛杉矶":"luòshānjī|Los Angeles","旧金山":"jiùjīnshān|San Francisco","华盛顿":"huáshèngdùn|Washington","天安门":"tiānānmén|Tiananmen (Gate of Heavenly Peace)","颐和园":"yíhéyuán|Summer Palace (Beijing)","兵马俑":"bīngmǎyǒng|Terracotta Warriors","黄山":"huángshān|Yellow Mountain; Mount Huangshan","西湖":"xīhú|West Lake (Hangzhou)","长江":"chángjiāng|Yangtze River; Changjiang","黄河":"huánghé|Yellow River","金字塔":"jīnzìtǎ|pyramid (especially the Egyptian pyramids)","对不起":"duìbuqǐ|sorry; excuse me; I beg your pardon","没关系":"méiguānxi|it doesn't matter; it's okay; never mind","请":"qǐng|please; to invite; to treat","太":"tài|too (excessive); very; extremely","最":"zuì|most; -est (superlative)","非常":"fēicháng|very; extremely","特别":"tèbié|especially; particular; special","比较":"bǐjiào|relatively; comparatively; to compare","完全":"wánquán|completely; entirely; wholly","真":"zhēn|really; truly; genuine","刚":"gāng|just (now); barely","却":"què|but; yet; however","倒":"dào|on the contrary; to pour; to invert","并":"bìng|actually (emphatic in negation); and","节日":"jiérì|festival; holiday","传统":"chuántǒng|tradition; traditional; convention","庆祝":"qìngzhù|to celebrate; celebration","红包":"hóngbāo|red envelope (with money)","灯笼":"dēnglong|lantern","国庆节":"guóqìngjié|National Day (October 1st)","新年":"xīnnián|New Year","圣诞节":"shèngdànjié|Christmas","感冒":"gǎnmào|to catch a cold; cold; flu","发烧":"fāshāo|to have a fever; fever","咳嗽":"késou|to cough; cough","头疼":"tóuténg|headache; to have a headache","药":"yào|medicine; drug; remedy","医":"yī|medical; medicine; to cure","保险":"bǎoxiǎn|insurance; to insure; safe","价格":"jiàgé|price","市场":"shìchǎng|market; marketplace","打折":"dǎzhé|to give a discount; on sale","免费":"miǎnfèi|free of charge; complimentary","超级":"chāojí|super; ultra-","广告":"guǎnggào|advertisement; to advertise","品牌":"pǐnpái|brand; trademark","元":"yuán|yuan (currency); origin","搬家":"bānjiā|to move house; to relocate","家具":"jiājù|furniture","空调":"kōngtiáo|air conditioning; air conditioner","冰箱":"bīngxiāng|refrigerator; fridge","电梯":"diàntī|elevator; escalator","考试":"kǎoshì|exam; test; to take an exam","问题":"wèntí|question; problem; issue","回答":"huídá|to answer; answer; reply","作业":"zuòyè|homework; assignment","课文":"kèwén|text (of a lesson)","词汇":"cíhuì|vocabulary; words","上课":"shàngkè|to attend class; to go to class","下课":"xiàkè|class is over; to finish class","语法":"yǔfǎ|grammar","练习":"liànxí|to practice; exercise","复习":"fùxí|to review; revision","拼音":"pīnyīn|pinyin (romanization of Chinese)","发音":"fāyīn|pronunciation; to pronounce","声调":"shēngdiào|tone (in Chinese)","普通话":"pǔtōnghuà|Mandarin; standard Chinese","龙":"lóng|dragon","老虎":"lǎohǔ|tiger","兔子":"tùzi|rabbit; bunny","猴子":"hóuzi|monkey","鸟":"niǎo|bird","马":"mǎ|horse","网络":"wǎngluò|network; internet","上网":"shàngwǎng|to go online; to surf the web","打电话":"dǎdiànhuà|to make a phone call","介绍":"jièshào|to introduce; introduction","迟到":"chídào|to arrive late; to be late","请假":"qǐngjià|to ask for leave; to request time off","毕业":"bìyè|to graduate; graduation","感谢":"gǎnxiè|to thank; grateful","欢迎":"huānyíng|to welcome; welcome","舒服":"shūfu|comfortable; feeling well","危险":"wēixiǎn|dangerous; danger; perilous","奇怪":"qíguài|strange; odd; weird","正常":"zhèngcháng|normal; regular; ordinary","普通":"pǔtōng|ordinary; common; average","厉害":"lìhai|awesome; formidable; terrible","棒":"bàng|great; wonderful; stick","差":"chà|poor; bad; to lack","错":"cuò|wrong; mistake; error","聪明":"cōngming|smart; clever; intelligent","可爱":"kěài|cute; lovely; adorable","有名":"yǒumíng|famous; well-known","干净":"gānjìng|clean; neat; tidy","方便":"fāngbiàn|convenient; to facilitate","整理":"zhěnglǐ|to organize; to tidy up","收拾":"shōushi|to tidy up; to put in order","邮局":"yóujú|post office","警察":"jǐngchá|police; police officer","政府":"zhèngfǔ|government","自由":"zìyóu|freedom; free; liberty","研究":"yánjiū|to research; research; study","实验":"shíyàn|experiment; to experiment","进步":"jìnbù|progress; to make progress; to improve","满意":"mǎnyì|satisfied; pleased; content","丰富":"fēngfù|rich; abundant; to enrich","各":"gè|each; every; various","每":"měi|each; every","某":"mǒu|certain; some","任何":"rènhé|any; whatever","所有":"suǒyǒu|all; every","其他":"qítā|other; the rest; else","自己":"zìjǐ|oneself; self; one's own","别人":"biérén|other people; others","大家":"dàjiā|everyone; everybody","有的":"yǒude|some (people/things)","一些":"yìxiē|some; a few; a little","一点":"yìdiǎn|a little; a bit","相当":"xiāngdāng|quite; fairly; considerably","越":"yuè|the more... the more...","更":"gèng|even more; still more","极":"jí|extremely; pole; utmost",
-"市中心":"shì zhōngxīn|city center; downtown","收音机":"shōuyīnjī|radio (device)","大堂":"dàtáng|lobby; main hall","客人":"kèrén|guest; visitor; customer","服务":"fúwù|service; to serve","雨伞":"yǔsǎn|umbrella","手表":"shǒubiǎo|wristwatch; watch","张":"zhāng|measure word (for flat objects); to open; (surname)","旅游点":"lǚyóudiǎn|tourist spot; scenic attraction","收":"shōu|to receive; to collect; to accept","伞":"sǎn|umbrella; parasol","表":"biǎo|watch; meter; form; to express","市":"shì|city; market","中心":"zhōngxīn|center; heart; core",
-"服务员":"fúwùyuán|waiter; waitress; attendant","服务台":"fúwùtái|service desk; reception desk","前台":"qiántái|front desk; reception",
-"钥匙":"yàoshi|key","房卡":"fángkǎ|room key card","电梯":"diàntī|elevator; escalator","楼":"lóu|floor; building; story",
-"楼上":"lóushàng|upstairs","楼下":"lóuxià|downstairs","空房":"kōngfáng|vacant room","入住":"rùzhù|to check in (hotel)",
-"退房":"tuìfáng|to check out (hotel)","押金":"yājīn|deposit","单人房":"dānrénfáng|single room","双人房":"shuāngrénfáng|double room",
-"早餐":"zǎocān|breakfast","午餐":"wǔcān|lunch","晚餐":"wǎncān|dinner; supper","自助餐":"zìzhùcān|buffet",
-"床":"chuáng|bed","毛巾":"máojīn|towel","牙刷":"yáshuā|toothbrush","肥皂":"féizào|soap","洗发水":"xǐfàshuǐ|shampoo",
-"窗户":"chuānghu|window","门":"mén|door; gate","钟":"zhōng|clock; bell","灯":"dēng|light; lamp",
-"客厅":"kètīng|living room","卧室":"wòshì|bedroom","厨房":"chúfáng|kitchen","厕所":"cèsuǒ|toilet; bathroom; restroom",
-"卫生间":"wèishēngjiān|bathroom; washroom","阳台":"yángtái|balcony","走廊":"zǒuláng|corridor; hallway",
-"请问":"qǐngwèn|may I ask; excuse me","多少钱":"duōshaoqián|how much money; how much does it cost",
-"不好意思":"bùhǎoyìsi|excuse me; sorry; embarrassed","打扰":"dǎrǎo|to disturb; to bother; excuse me",
-"第一":"dìyī|first; number one","第二":"dìèr|second","第三":"dìsān|third",
-"左边":"zuǒbiān|left side; on the left","右边":"yòubiān|right side; on the right",
-"前面":"qiánmiàn|in front; ahead","后面":"hòumiàn|behind; at the back","中间":"zhōngjiān|middle; between",
-"最近":"zuìjìn|recently; nearest","刚刚":"gānggāng|just now; a moment ago","一会儿":"yíhuìr|a moment; a while",
-"马路":"mǎlù|road; street","公路":"gōnglù|highway; public road","高速":"gāosù|high-speed; highway",
-"十字路口":"shízìlùkǒu|intersection; crossroads","红绿灯":"hónglǜdēng|traffic light",
-"拐":"guǎi|to turn (left/right)","直走":"zhízǒu|to go straight","过马路":"guòmǎlù|to cross the road",
-"东":"dōng|east","南":"nán|south","西":"xī|west","北":"běi|north",
-"东边":"dōngbiān|east side","南边":"nánbiān|south side","西边":"xībiān|west side","北边":"běibiān|north side",
-"对不起":"duìbuqǐ|sorry; I apologize","没事":"méishì|it's nothing; no problem; it's fine",
-"当然":"dāngrán|of course; certainly","大约":"dàyuē|approximately; about","大概":"dàgài|probably; roughly",
-"一般":"yìbān|generally; ordinary; so-so","特别":"tèbié|especially; special; particular",
-"通常":"tōngcháng|usually; normally; generally","平时":"píngshí|usually; in normal times",
-"可惜":"kěxī|it's a pity; what a shame","没想到":"méixiǎngdào|didn't expect; unexpectedly",
-"生病":"shēngbìng|to get sick; to fall ill","打针":"dǎzhēn|to give/get an injection","手术":"shǒushù|surgery; operation",
-"牙齿":"yáchǐ|tooth; teeth","胃":"wèi|stomach","心脏":"xīnzàng|heart (organ)","血":"xiě|blood",
-"处方":"chǔfāng|prescription","检查":"jiǎnchá|to check; to examine; examination",
-"吵":"chǎo|noisy; to quarrel","安静":"ānjìng|quiet; peaceful","干燥":"gānzào|dry; arid",
-"潮湿":"cháoshī|damp; humid; moist","温暖":"wēnnuǎn|warm","凉快":"liángkuai|pleasantly cool",
-"晴天":"qíngtiān|sunny day; clear day","阴天":"yīntiān|cloudy day; overcast","雷":"léi|thunder","闪电":"shǎndiàn|lightning",
-"下雪":"xiàxuě|to snow","刮风":"guāfēng|to be windy","温度":"wēndù|temperature","度":"dù|degree; measure",
-"信":"xìn|letter; mail; to believe","信封":"xìnfēng|envelope","邮票":"yóupiào|postage stamp",
-"包裹":"bāoguǒ|package; parcel","快递":"kuàidì|express delivery; courier",
-"味道":"wèidào|taste; flavor","甜":"tián|sweet","酸":"suān|sour","辣":"là|spicy; hot","苦":"kǔ|bitter",
-"咸":"xián|salty","淡":"dàn|bland; light; pale","好吃":"hǎochī|delicious; tasty","难吃":"nánchī|bad-tasting",
-"糖":"táng|sugar; candy","盐":"yán|salt","酱油":"jiàngyóu|soy sauce","醋":"cù|vinegar","油":"yóu|oil; oily",
-"碗":"wǎn|bowl","盘子":"pánzi|plate; dish","杯子":"bēizi|cup; glass","筷子":"kuàizi|chopsticks",
-"勺子":"sháozi|spoon; ladle","叉子":"chāzi|fork","刀":"dāo|knife","瓶子":"píngzi|bottle",
-"袋子":"dàizi|bag; sack","钱包":"qiánbāo|wallet; purse","背包":"bēibāo|backpack","手套":"shǒutào|gloves",
-"围巾":"wéijīn|scarf","眼镜":"yǎnjìng|glasses; spectacles","太阳镜":"tàiyángjìng|sunglasses",
-"化妆品":"huàzhuāngpǐn|cosmetics; makeup","香水":"xiāngshuǐ|perfume","镜子":"jìngzi|mirror",
-"梳子":"shūzi|comb","毛笔":"máobǐ|Chinese writing brush","铅笔":"qiānbǐ|pencil","橡皮":"xiàngpí|eraser",
-"尺子":"chǐzi|ruler","纸":"zhǐ|paper","本子":"běnzi|notebook; exercise book",
-"报纸":"bàozhǐ|newspaper","杂志":"zázhì|magazine","小说":"xiǎoshuō|novel; fiction",
-"网":"wǎng|net; network; internet","密码":"mìmǎ|password; code","账号":"zhànghào|account (username)",
-"下载":"xiàzài|to download","上传":"shàngchuán|to upload","搜索":"sōusuǒ|to search",
-"聊天":"liáotiān|to chat","发短信":"fāduǎnxìn|to send a text message","微信":"wēixìn|WeChat",
-"支付宝":"zhīfùbǎo|Alipay","现金":"xiànjīn|cash","信用卡":"xìnyòngkǎ|credit card","银行卡":"yínhángkǎ|bank card",
-"收据":"shōujù|receipt","发票":"fāpiào|invoice; receipt","零钱":"língqián|small change; coins",
-"份":"fèn|portion; share; measure word (for documents)","条":"tiáo|strip; measure word (for long thin things)",
-"件":"jiàn|piece; item; measure word (for clothes/events)","双":"shuāng|pair; double; measure word (for pairs)",
-"只":"zhī|measure word (for animals/one of a pair)","位":"wèi|measure word (for people, polite)",
-"本":"běn|measure word (for books)","把":"bǎ|measure word (for things with handles); preposition",
-"辆":"liàng|measure word (for vehicles)","台":"tái|measure word (for machines); platform; stage",
-"句":"jù|measure word (for sentences)","首":"shǒu|measure word (for poems/songs); head; first",
-"节":"jié|section; festival; measure word (for classes/segments)","层":"céng|layer; floor; story",
-"座":"zuò|measure word (for buildings/mountains); seat","间":"jiān|measure word (for rooms); between",
-"所":"suǒ|measure word (for buildings); place","家":"jiā|measure word (for businesses/families); home",
-"种":"zhǒng|kind; type; measure word (for types)","次":"cì|measure word (for occurrences); time; order",
-"遍":"biàn|measure word (for actions done from start to finish); time",
-"顿":"dùn|measure word (for meals); to pause","杯":"bēi|measure word (for drinks); cup",
-"瓶":"píng|measure word (for bottles); bottle",
-"着":"zhe|verb particle indicating ongoing action","过":"guò|verb particle indicating experience",
-"得":"de|structural particle (complement marker)","地":"de|structural particle (adverbial marker)",
-"叔叔":"shūshu|uncle","阿姨":"āyí|aunt; auntie","不敢":"bùgǎn|don't dare; to not dare","干杯":"gānbēi|cheers; bottoms up","海洋馆":"hǎiyángguǎn|aquarium; oceanarium","张":"zhāng|measure word (for flat objects); to open","台灯":"táidēng|desk lamp; table lamp","这儿":"zhèr|here","这边":"zhèbiān|this side; over here","冰淇淋":"bīngqílín|ice cream","点菜":"diǎncài|to order dishes; to order food","动物园":"dòngwùyuán|zoo","回家":"huíjiā|to go home; to return home","看书":"kànshū|to read (a book)","中国画":"zhōngguóhuà|Chinese painting","模型":"móxíng|model; mold","请进":"qǐngjìn|please come in","饮料":"yǐnliào|drinks; beverages","酸奶":"suānnǎi|yogurt","橙汁":"chéngzhī|orange juice","可乐":"kělè|cola; Coke","葡萄":"pútao|grape; grapes","黄油":"huángyóu|butter","奶酪":"nǎilào|cheese","桶":"tǒng|bucket; barrel; jug","盒":"hé|box; case","早饭":"zǎofàn|breakfast","时尚":"shíshàng|fashion; fashionable","骑车":"qíchē|to ride a bike","汽车":"qìchē|car; automobile","货车":"huòchē|truck; cargo vehicle","别着急":"biézhāojí|don't worry; don't be anxious","最后":"zuìhòu|last; final; lastly","也许":"yěxǔ|maybe; perhaps","和平":"hépíng|peace; peaceful","上学":"shàngxué|to go to school; to attend school","锻炼":"duànliàn|to exercise; to work out","陪":"péi|to accompany; to keep company","卖":"mài|to sell","卖完了":"màiwánle|sold out; all sold","吃完了":"chīwánle|finished eating; ate all","学完了":"xuéwánle|finished studying; learned all","看完了":"kànwánle|finished reading/watching","做完了":"zuòwánle|completely done; finished doing","好听":"hǎotīng|pleasant to listen to; sounds good","可是":"kěshì|but; however","回来了":"huíláile|came back; returned","进球":"jìnqiú|to score a goal","电视剧":"diànshìjù|TV drama; TV series","棒极了":"bàngjíle|extremely awesome; fantastic","一块":"yíkuài|a piece; together","点心":"diǎnxin|snack; dim sum","当然":"dāngrán|of course; certainly","皇宫":"huánggōng|imperial palace","皇帝":"huángdì|emperor","皇后":"huánghòu|empress","后天":"hòutiān|the day after tomorrow","伟大":"wěidà|great; mighty","太太":"tàitai|wife; Mrs.; madam","地图":"dìtú|map","好玩":"hǎowán|fun; amusing; interesting","写作业":"xiězuòyè|to do homework","物理":"wùlǐ|physics","元宵节":"yuánxiāojié|Lantern Festival","习俗":"xísú|custom; tradition","当做":"dàngzuò|to regard as; to treat as","尝尝":"chángchang|to taste; to try (food)","生猛海鲜":"shēngměnghǎixiān|fresh seafood","画画":"huàhuà|to draw; to paint","画儿":"huàr|picture; drawing","像":"xiàng|to resemble; alike; image","中间":"zhōngjiān|middle; between; among","来了":"láile|coming; has arrived","请进":"qǐngjìn|please enter; come in","这个":"zhège|this; this one","张纸":"zhāngzhǐ|a piece of paper","张床":"zhāng chuáng|a bed (measure word + bed)","张地图":"zhāng dìtú|a map (measure word + map)"
-
-};
-// 705 entries (CC-CEDICT style)
 
 // Detect if text looks like pinyin (CamelCase syllables, no real English words)
 function looksLikePinyin(text) {
@@ -2103,6 +2014,42 @@ function looksLikePinyin(text) {
 }
 
 // Clean up a vocab entry: ensure pinyin and english fields aren't swapped
+// Common spelling corrections for imported definitions
+const SPELL_FIXES = {
+  'confortable':'comfortable','comparetively':'comparatively','pronenciation':'pronunciation',
+  'extersise':'exercise','extreemly':'extremely','pyrimids':'pyramids','pyrimid':'pyramid',
+  'tommorow':'tomorrow','vechicle':'vehicle','yougurt':'yogurt','completly':'completely',
+  'restaraunt':'restaurant','grammer':'grammar','calender':'calendar','begining':'beginning',
+  'occured':'occurred','accomodate':'accommodate','neccessary':'necessary','definately':'definitely',
+  'seperate':'separate','recieve':'receive','foriegn':'foreign','enviroment':'environment',
+  'goverment':'government','wierd':'weird','acheive':'achieve','beleive':'believe',
+  'buisness':'business','occassion':'occasion','independant':'independent','embarassed':'embarrassed',
+  'persistant':'persistent','concious':'conscious','noticable':'noticeable','agressive':'aggressive',
+  'priviledge':'privilege','existance':'existence','relevent':'relevant','equiptment':'equipment',
+  'apparantly':'apparently','maintainance':'maintenance','occurance':'occurrence','untill':'until',
+  'excercise':'exercise','langauge':'language','pronounciation':'pronunciation','arguement':'argument',
+  'dissapear':'disappear','dissapoint':'disappoint','harrass':'harass','knowlege':'knowledge',
+  'lisence':'license','mispell':'misspell','neigbor':'neighbor','posession':'possession',
+  'prefered':'preferred','refered':'referred','rythm':'rhythm','schedual':'schedule',
+  'succesful':'successful','suprise':'surprise','truely':'truly','writting':'writing',
+  'tradtional':'traditional','beautifull':'beautiful','carefull':'careful','wonderfull':'wonderful',
+  'hapiness':'happiness','goverment':'government','labatory':'laboratory','libary':'library',
+  'millenium':'millennium','paralel':'parallel','publically':'publicly','recomend':'recommend',
+  'alot':'a lot','dont':'don\'t','doesnt':'doesn\'t','cant':'can\'t','wont':'won\'t',
+  'isnt':'isn\'t','wasnt':'wasn\'t','shouldnt':'shouldn\'t','couldnt':'couldn\'t',
+  'wouldnt':'wouldn\'t','havent':'haven\'t','hasnt':'hasn\'t','didnt':'didn\'t','arent':'aren\'t',
+};
+
+function correctSpelling(text) {
+  if (!text) return text;
+  let fixed = text;
+  for (const [wrong, right] of Object.entries(SPELL_FIXES)) {
+    const regex = new RegExp('\\b' + wrong + '\\b', 'gi');
+    fixed = fixed.replace(regex, right);
+  }
+  return fixed;
+}
+
 function validateVocabFields(item) {
   let { hanzi, pinyin, english } = item;
   // If english looks like pinyin, and pinyin looks like english (or empty), swap them
@@ -2118,19 +2065,12 @@ function validateVocabFields(item) {
     english = pinyin;
     pinyin = null;
   }
+  // Correct spelling in English definition
+  if (english) english = correctSpelling(english);
   return { hanzi, pinyin, english };
 }
 
-function lookupLocal(hanzi) {
-  const entry = DICT[hanzi];
-  if (entry) {
-    const [pinyin, english] = entry.split('|');
-    return { hanzi, pinyin, english };
-  }
-  return null;
-}
-
-// Google Translate lookup for words not in local dictionary
+// Google Translate lookup
 async function lookupGoogleTranslate(hanzi) {
   try {
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh-CN&tl=en&dt=t&dt=rm&q=${encodeURIComponent(hanzi)}`;
@@ -2162,8 +2102,6 @@ async function lookupGoogleTranslate(hanzi) {
 
 // Combined lookup: local dict first, then Google Translate
 async function lookupWord(hanzi) {
-  const local = lookupLocal(hanzi);
-  if (local) return local;
   return await lookupGoogleTranslate(hanzi);
 }
 
@@ -2631,10 +2569,9 @@ async function processExtractedChinese(chineseItems, status) {
 
     // Priority 1: Document-provided English definition
     if (item.english) {
-      const local = lookupLocal(item.hanzi);
       found.push({
         hanzi: item.hanzi,
-        pinyin: item.pinyin || (local ? local.pinyin : null),
+        pinyin: item.pinyin || null,
         english: item.english
       });
     } else {
@@ -2642,10 +2579,9 @@ async function processExtractedChinese(chineseItems, status) {
     }
   });
 
-  // Priority 2: Google Translate
+  // Priority 2: Google Translate for words without document definitions
   if (needLookup.length > 0) {
-    status.innerHTML = `<span style="color:var(--hud-cyan);">${found.length} from document · Looking up ${needLookup.length} more...</span>`;
-    const stillMissing = [];
+    status.innerHTML = `<span style="color:var(--hud-cyan);">${found.length} from document · Looking up ${needLookup.length} via Google Translate...</span>`;
     for (const item of needLookup) {
       const gt = await lookupGoogleTranslate(item.hanzi);
       if (gt && gt.english) {
@@ -2654,16 +2590,6 @@ async function processExtractedChinese(chineseItems, status) {
           pinyin: item.pinyin || gt.pinyin,
           english: gt.english
         });
-      } else {
-        stillMissing.push(item);
-      }
-    }
-
-    // Priority 3: Local dictionary as last resort
-    for (const item of stillMissing) {
-      const local = lookupLocal(item.hanzi);
-      if (local) {
-        found.push(local);
       }
     }
   }
@@ -2673,11 +2599,7 @@ async function processExtractedChinese(chineseItems, status) {
     if (!item.pinyin || item.pinyin === '?') {
       const gt = await lookupGoogleTranslate(item.hanzi);
       if (gt && gt.pinyin) item.pinyin = gt.pinyin;
-      else {
-        const local = lookupLocal(item.hanzi);
-        if (local) item.pinyin = local.pinyin;
-        else item.pinyin = item.pinyin || '?';
-      }
+      else item.pinyin = item.pinyin || '?';
     }
   }
 
