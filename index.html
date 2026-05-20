@@ -1525,10 +1525,10 @@ const DEFAULT_VOCAB = [
   { hanzi: "穿", pinyin: "chuān", english: "to wear" },
   { hanzi: "衣服", pinyin: "yīfu", english: "clothes" },
   { hanzi: "流行", pinyin: "liúxíng", english: "popular / trendy" },
-  { hanzi: "红色", pinyin: "hóngsè", english: "red (color)" },
-  { hanzi: "白色", pinyin: "báisè", english: "white (color)" },
+  { hanzi: "红色", pinyin: "hóngsè", english: "red" },
+  { hanzi: "白色", pinyin: "báisè", english: "white" },
   { hanzi: "鞋子", pinyin: "xiézi", english: "shoes" },
-  { hanzi: "黑色", pinyin: "hēisè", english: "black (color)" },
+  { hanzi: "黑色", pinyin: "hēisè", english: "black" },
   { hanzi: "裤子", pinyin: "kùzi", english: "pants" },
   { hanzi: "裙子", pinyin: "qúnzi", english: "skirt" },
   { hanzi: "颜色", pinyin: "yánsè", english: "color" },
@@ -1538,10 +1538,10 @@ const DEFAULT_VOCAB = [
   { hanzi: "出去", pinyin: "chūqù", english: "to go out" },
   { hanzi: "晚会", pinyin: "wǎnhuì", english: "evening party" },
   { hanzi: "越来越", pinyin: "yuèláiyuè", english: "more and more" },
-  { hanzi: "黄色", pinyin: "huángsè", english: "yellow (color)" },
-  { hanzi: "橙色", pinyin: "chéngsè", english: "orange (color)" },
-  { hanzi: "紫色", pinyin: "zǐsè", english: "purple (color)" },
-  { hanzi: "蓝色", pinyin: "lánsè", english: "blue (color)" },
+  { hanzi: "黄色", pinyin: "huángsè", english: "yellow" },
+  { hanzi: "橙色", pinyin: "chéngsè", english: "orange" },
+  { hanzi: "紫色", pinyin: "zǐsè", english: "purple" },
+  { hanzi: "蓝色", pinyin: "lánsè", english: "blue" },
   { hanzi: "知道", pinyin: "zhīdào", english: "to know" },
   { hanzi: "京剧", pinyin: "jīngjù", english: "Peking opera" },
   { hanzi: "古老", pinyin: "gǔlǎo", english: "ancient" },
@@ -1904,7 +1904,7 @@ async function lookupAndAdd() {
 
   // If all 3 fields filled, add directly
   if (manualPinyin && manualEnglish) {
-    VOCAB.push({ hanzi, pinyin: manualPinyin, english: correctSpelling(manualEnglish) });
+    VOCAB.push({ hanzi, pinyin: manualPinyin, english: cleanDefinition(correctSpelling(manualEnglish)) });
     document.getElementById('m-hanzi').value = '';
     document.getElementById('m-pinyin').value = '';
     document.getElementById('m-english').value = '';
@@ -1928,7 +1928,7 @@ async function lookupAndAdd() {
   }
 
   if (pinyin && english) {
-    VOCAB.push({ hanzi, pinyin, english: correctSpelling(english) });
+    VOCAB.push({ hanzi, pinyin, english: cleanDefinition(correctSpelling(english)) });
     document.getElementById('m-hanzi').value = '';
     document.getElementById('m-pinyin').value = '';
     document.getElementById('m-english').value = '';
@@ -2050,6 +2050,50 @@ function correctSpelling(text) {
   return fixed;
 }
 
+// Remove parentheses and capitalize proper nouns
+const PROPER_NOUNS = new Set([
+  'china','chinese','mandarin','cantonese','english','japanese','korean','french','german',
+  'spanish','italian','russian','arabic','hindi','thai','vietnamese','portuguese',
+  'beijing','shanghai','hong kong','taipei','tokyo','seoul','london','paris','new york',
+  'los angeles','san francisco','sydney','toronto','washington','singapore','bangkok',
+  'nanjing','xi\'an','chengdu','hangzhou','guangzhou','shenzhen','chongqing','tianjin','wuhan','suzhou',
+  'america','american','united states','united kingdom','britain','british','england',
+  'france','germany','italy','spain','australia','canada','india','russia','egypt',
+  'japan','korea','south korea','thailand','vietnam','brazil','mexico','switzerland',
+  'netherlands','new zealand','malaysia','philippines','indonesia',
+  'peking','forbidden city','great wall','tiananmen','summer palace','terracotta warriors',
+  'oriental pearl','west lake','yellow river','yangtze','yellow mountain',
+  'christmas','easter','halloween','thanksgiving',
+  'spring festival','mid-autumn festival','lantern festival','dragon boat festival',
+  'monday','tuesday','wednesday','thursday','friday','saturday','sunday',
+  'january','february','march','april','may','june','july','august','september','october','november','december',
+  'buddha','buddhist','buddhism','confucius','confucian','confucianism','taoist','taoism',
+  'wechat','alipay','baidu','alibaba','tencent','huawei','xiaomi',
+  'coca-cola','coke','pepsi','mcdonald\'s','starbucks','nike','adidas',
+  'internet','wifi','google','youtube','facebook','instagram','twitter',
+]);
+
+function cleanDefinition(text) {
+  if (!text) return text;
+  // Remove parenthesized content
+  let cleaned = text.replace(/\s*\([^)]*\)/g, '').replace(/\s*（[^）]*）/g, '').trim();
+  // Remove double spaces left behind
+  cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
+  // Capitalize proper nouns
+  for (const noun of PROPER_NOUNS) {
+    const regex = new RegExp('\\b' + noun.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+    cleaned = cleaned.replace(regex, (match) => {
+      // Capitalize first letter of each word in the noun
+      return noun.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    });
+  }
+  // Also capitalize first letter of the whole definition
+  if (cleaned.length > 0) {
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }
+  return cleaned;
+}
+
 function validateVocabFields(item) {
   let { hanzi, pinyin, english } = item;
   // If english looks like pinyin, and pinyin looks like english (or empty), swap them
@@ -2065,8 +2109,8 @@ function validateVocabFields(item) {
     english = pinyin;
     pinyin = null;
   }
-  // Correct spelling in English definition
-  if (english) english = correctSpelling(english);
+  // Correct spelling and clean up English definition
+  if (english) english = cleanDefinition(correctSpelling(english));
   return { hanzi, pinyin, english };
 }
 
