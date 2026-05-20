@@ -2075,8 +2075,15 @@ const PROPER_NOUNS = new Set([
 
 function cleanDefinition(text) {
   if (!text) return text;
-  // Remove parenthesized content
-  let cleaned = text.replace(/\s*\([^)]*\)/g, '').replace(/\s*（[^）]*）/g, '').trim();
+  let cleaned = text.trim();
+  // If entire definition is wrapped in parentheses/brackets, just strip them
+  if (/^\([^)]+\)$/.test(cleaned)) cleaned = cleaned.slice(1, -1);
+  if (/^（[^）]+）$/.test(cleaned)) cleaned = cleaned.slice(1, -1);
+  if (/^\[[^\]]+\]$/.test(cleaned)) cleaned = cleaned.slice(1, -1);
+  // Remove parenthesized/bracketed qualifiers within a longer definition
+  cleaned = cleaned.replace(/\s*\([^)]*\)/g, '').replace(/\s*（[^）]*）/g, '').replace(/\s*\[[^\]]*\]/g, '').trim();
+  // If stripping removed everything, use original without outer parens/brackets
+  if (!cleaned) cleaned = text.replace(/^[\(\[（]|[\)\]）]$/g, '').trim();
   // Remove double spaces left behind
   cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
   // Capitalize proper nouns
