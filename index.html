@@ -2172,7 +2172,7 @@ async function handleImportFile(file) {
       if (match) {
         const arr = JSON.parse(match[0]);
         const chineseWords = arr.filter(w => typeof w === 'string' && /[\u2E80-\u2FDF\u3400-\u4dbf\u4e00-\u9fff\uF900-\uFAFF]/.test(w));
-        processExtractedChinese(chineseWords.map(w => ({hanzi: w, pinyin: null})), status);
+        await processExtractedChinese(chineseWords.map(w => ({hanzi: w, pinyin: null, english: null})), status);
       } else {
         throw new Error('No words found');
       }
@@ -2360,7 +2360,7 @@ async function handleImportFile(file) {
       const result = await mammoth.extractRawText({ arrayBuffer });
       const rawText = result.value;
       const extracted = extractChineseFromText(rawText);
-      processExtractedChinese(extracted, status);
+      await processExtractedChinese(extracted, status);
     } catch (err) {
       status.innerHTML = '<span class="error">⚠ COULD NOT READ DOCX FILE</span>';
     }
@@ -2434,7 +2434,7 @@ async function handleImportFile(file) {
     try {
       const text = await readFileText(file);
       const extracted = extractChineseFromText(text);
-      processExtractedChinese(extracted, status);
+      await processExtractedChinese(extracted, status);
     } catch (err) {
       status.innerHTML = '<span class="error">⚠ COULD NOT READ FILE</span>';
     }
