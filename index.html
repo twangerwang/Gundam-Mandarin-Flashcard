@@ -2304,24 +2304,45 @@ let importedWords = [];
 // Takes Tesseract word boxes {text, bbox:{x0,y0,x1,y1}} and reconstructs
 // {hanzi, pinyin, english} rows using column position detection,
 // mirroring the approach used for PDF/Excel imports.
-function ocrWordsToRows(words) {
+// Takes Tesseract's recognition result and reconstructs {hanzi, pinyin, english}
+// rows using column position detection. Prefers Tesseract's own line
+// segmentation (data.lines) since it uses proper layout analysis; falls back
+// to Y-position clustering only if lines aren't available.
+function ocrWordsToRows(data) {
   const CJK = /[\u2E80-\u2FDF\u3400-\u4dbf\u4e00-\u9fff\uF900-\uFAFF]/;
-  const clean = words
-    .map(w => ({ text: w.text.trim(), x0: w.bbox.x0, x1: w.bbox.x1, y0: w.bbox.y0, y1: w.bbox.y1, yc: (w.bbox.y0 + w.bbox.y1) / 2 }))
-    .filter(w => w.text);
 
-  if (clean.length === 0) return [];
+  const normalizeWord = w => ({
+    text: (w.text || '').trim(),
+    x0: w.bbox.x0, x1: w.bbox.x1, y0: w.bbox.y0, y1: w.bbox.y1,
+    yc: (w.bbox.y0 + w.bbox.y1) / 2
+  });
+
+  // Prefer Tesseract's own detected lines — more reliable than reconstructing
+  // rows from a flat word list, since it accounts for skew, baselines, etc.
+  let lineGroups = [];
+  if (data.lines && data.lines.length) {
+    lineGroups = data.lines
+      .filter(l => l.words && l.words.length)
+      .map(l => l.words.map(normalizeWord).filter(w => w.text));
+  }
+  if (lineGroups.length === 0) {
+    // Fallback: reconstruct lines ourselves from the flat word list
+    const flat = (data.words || []).map(normalizeWord).filter(w => w.text);
+    if (flat.length === 0) return [];
+    const avgHeight = flat.reduce((s, w) => s + (w.y1 - w.y0), 0) / flat.length;
+    const lineTol = Math.max(avgHeight * 0.6, 8);
+    lineGroups = groupIntoLines(flat, lineTol);
+  }
+  lineGroups = lineGroups.filter(g => g.length);
+  if (lineGroups.length === 0) return [];
+
+  const allWords = lineGroups.flat();
 
   // ---- Step 1: Try to find header row (中文字/中文/Chinese, 拼音/Pinyin, 英文/English) ----
   const headerWords = { chinese: /^(中文字?|汉字|生词|词汇|chinese)$/i, pinyin: /^(拼音|pinyin|pinying)$/i, english: /^(英文|english)$/i };
-  let colBounds = null; // { pinyinStartX, englishStartX }
+  let colBounds = null;
 
-  // Group into lines first to scan for header
-  const avgHeight = clean.reduce((s, w) => s + (w.y1 - w.y0), 0) / clean.length;
-  const lineTol = Math.max(avgHeight * 0.6, 8);
-
-  const linesForHeader = groupIntoLines(clean, lineTol);
-  for (const line of linesForHeader) {
+  for (const line of lineGroups) {
     const sorted = line.slice().sort((a, b) => a.x0 - b.x0);
     let pyX = null, enX = null, foundChinese = false;
     sorted.forEach(w => {
@@ -2337,8 +2358,7 @@ function ocrWordsToRows(words) {
 
   // ---- Step 2: If no header found, estimate columns from content distribution ----
   if (!colBounds) {
-    // Cluster all X start positions to find up to 3 column groups
-    const xs = clean.map(w => w.x0).sort((a, b) => a - b);
+    const xs = allWords.map(w => w.x0).sort((a, b) => a - b);
     const clusters = [];
     xs.forEach(x => {
       const last = clusters[clusters.length - 1];
@@ -2360,19 +2380,15 @@ function ocrWordsToRows(words) {
     }
   }
 
-  // ---- Step 3: Group all words into lines (rows) ----
-  const lines = groupIntoLines(clean, lineTol);
-
-  // ---- Step 4: For each line, split into Chinese / Pinyin / English by X position ----
+  // ---- Step 3: For each line, split into Chinese / Pinyin / English by X position ----
   const skipWords = new Set(['中文字', '中文', '拼音', '英文', '汉字', 'chinese', 'pinyin', 'pinying', 'english', '名字', '姓名']);
   const rows = [];
 
-  lines.forEach(line => {
+  lineGroups.forEach(line => {
     const sorted = line.slice().sort((a, b) => a.x0 - b.x0);
     const lineText = sorted.map(w => w.text).join('');
-    // Skip lines that are just the header or a name field
     if (sorted.length <= 3 && sorted.every(w => skipWords.has(w.text.toLowerCase()) || skipWords.has(w.text))) return;
-    if (/^(名字|B\d|L\d).*[:：]/.test(lineText)) return; // e.g. "名字: Theo" or "B2 L1..."
+    if (/^(名字|B\d|L\d).*[:：]/.test(lineText)) return;
 
     const cjkWords = sorted.filter(w => CJK.test(w.text));
     const latinWords = sorted.filter(w => !CJK.test(w.text));
@@ -2388,7 +2404,6 @@ function ocrWordsToRows(words) {
       pinyin = pyPart.map(w => w.text).join(' ').trim();
       english = enPart.map(w => w.text).join(' ').trim();
     } else {
-      // No clear column split — treat all latin as pinyin if short, else english
       const allLatin = latinWords.map(w => w.text).join(' ').trim();
       if (allLatin.split(/\s+/).length <= 3 && /^[a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ\s]+$/.test(allLatin)) {
         pinyin = allLatin;
@@ -2397,7 +2412,6 @@ function ocrWordsToRows(words) {
       }
     }
 
-    // Strip trailing row numbers (OCR often reads the numbered list column, e.g. "1", "12")
     english = english.replace(/\s+\d{1,2}$/, '').trim();
     pinyin = pinyin.replace(/\s+\d{1,2}$/, '').trim();
 
@@ -2563,23 +2577,24 @@ async function handleImportFile(file) {
           }
         }
       });
-      // PSM 6: "assume a single uniform block of text" — suits a vocab table
-      // better than fully-automatic segmentation, which can fragment ruled tables.
-      await worker.setParameters({ tessedit_pageseg_mode: '6' });
+      // PSM 4: "assume a single column of text of variable sizes" — this matches
+      // a vocabulary list's structure (one row per entry) much better than a
+      // fully-uniform block, and gives Tesseract's own line segmentation
+      // (which we rely on) more accurate row boundaries to work with.
+      await worker.setParameters({ tessedit_pageseg_mode: '4' });
 
       const { data } = await worker.recognize(cleanedImage);
       await worker.terminate();
       progWrap.style.display = 'none';
 
-      // Drop low-confidence detections — these are usually noise (gridlines,
-      // bleed-through, stray marks) rather than real characters.
-      const words = (data.words || []).filter(w => w.text && w.text.trim() && (w.confidence === undefined || w.confidence >= 35));
-      if (words.length === 0) {
+      const hasAnyText = (data.words && data.words.some(w => w.text && w.text.trim()))
+        || (data.lines && data.lines.some(l => l.text && l.text.trim()));
+      if (!hasAnyText) {
         status.innerHTML = '<span class="error">⚠ NO TEXT DETECTED IN IMAGE — try a clearer photo, better lighting, or less background bleed-through</span>';
         return;
       }
 
-      const rows = ocrWordsToRows(words);
+      const rows = ocrWordsToRows(data);
       if (rows.length === 0) {
         status.innerHTML = '<span class="error">⚠ NO CHINESE VOCABULARY FOUND — try cropping tighter to the word list</span>';
         return;
