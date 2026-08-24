@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2577,19 +2578,30 @@ async function handleImportFile(file) {
           }
         }
       });
-      // PSM 4: "assume a single column of text of variable sizes" — this matches
-      // a vocabulary list's structure (one row per entry) much better than a
-      // fully-uniform block, and gives Tesseract's own line segmentation
-      // (which we rely on) more accurate row boundaries to work with.
-      await worker.setParameters({ tessedit_pageseg_mode: '4' });
 
-      const { data } = await worker.recognize(cleanedImage);
+      // Try Tesseract's default fully-automatic segmentation first (PSM 3),
+      // then fall back to other modes if it finds nothing — ruled table
+      // borders can throw off some segmentation assumptions depending on
+      // the document, so no single mode is reliable for every photo.
+      // Try several segmentation modes and keep whichever finds the most
+      // content — stopping at the first mode with ANY output is wrong,
+      // since a mode can return a couple of garbage words while a later
+      // mode finds the real text.
+      const psmModesToTry = ['3', '6', '11', '4'];
+      let bestData = null, bestScore = -1;
+      for (const psm of psmModesToTry) {
+        progLabel.textContent = `SCANNING TEXT (MODE ${psm})...`;
+        await worker.setParameters({ tessedit_pageseg_mode: psm });
+        const result = await worker.recognize(cleanedImage);
+        const cjkWordCount = (result.data.words || [])
+          .filter(w => w.text && w.text.trim() && /[\u2E80-\u2FDF\u3400-\u4dbf\u4e00-\u9fff\uF900-\uFAFF]/.test(w.text)).length;
+        if (cjkWordCount > bestScore) { bestScore = cjkWordCount; bestData = result.data; }
+      }
       await worker.terminate();
       progWrap.style.display = 'none';
 
-      const hasAnyText = (data.words && data.words.some(w => w.text && w.text.trim()))
-        || (data.lines && data.lines.some(l => l.text && l.text.trim()));
-      if (!hasAnyText) {
+      const data = bestScore > 0 ? bestData : null;
+      if (!data) {
         status.innerHTML = '<span class="error">⚠ NO TEXT DETECTED IN IMAGE — try a clearer photo, better lighting, or less background bleed-through</span>';
         return;
       }
