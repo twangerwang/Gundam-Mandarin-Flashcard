@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2468,8 +2467,6 @@ async function handleImportFile(file) {
 
     try {
       const worker = await Tesseract.createWorker(['chi_sim', 'eng'], 1, {
-        workerBlobURL: false,
-        workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
         logger: m => {
           if (m.status === 'recognizing text') {
             const pct = Math.round((m.progress || 0) * 100);
@@ -2516,12 +2513,8 @@ async function handleImportFile(file) {
       showEditablePreview(cleaned, true);
     } catch (err) {
       progWrap.style.display = 'none';
-      const msg = err.message || '';
-      if (/Worker|blob-request/i.test(msg)) {
-        status.innerHTML = '<span class="error">⚠ OCR IS BLOCKED IN THIS PREVIEW SANDBOX<br>This works once the app is hosted on GitHub Pages (or any normal website) — the sandbox here blocks the background worker OCR needs.<br>TIP: Type the words from the image into the fields above instead.</span>';
-      } else {
-        status.innerHTML = '<span class="error">⚠ OCR FAILED — ' + msg + '<br>TIP: Type the words from the image into the fields above instead.</span>';
-      }
+      const msg = err.message || 'unknown error';
+      status.innerHTML = `<span class="error">⚠ OCR FAILED — ${msg}<br>Try: a clearer/brighter photo, a different browser, or checking your internet connection (OCR downloads a language model on first use).<br>TIP: Type the words from the image into the fields above instead.</span>`;
     }
   } else if (isPdf) {
     status.innerHTML = '<span style="color:var(--hud-cyan);">CONVERTING PDF TO SPREADSHEET...</span>';
