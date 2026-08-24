@@ -1118,6 +1118,39 @@
   .preview-pinyin { color: var(--hud-amber); min-width: 100px; font-size: 0.85rem; }
   .preview-def { color: var(--text-main); font-size: 0.85rem; flex: 1; opacity: 0.6; }
 
+  .preview-input {
+    background: var(--hull-mid);
+    border: 1px solid var(--hull-edge);
+    color: var(--text-main);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 6px 8px;
+    border-radius: 3px;
+    outline: none;
+  }
+  .preview-input:focus { border-color: var(--hud-cyan-dim); box-shadow: 0 0 8px rgba(0,212,255,0.1); }
+  .preview-input.hanzi-input {
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    width: 70px;
+    flex-shrink: 0;
+  }
+  .preview-input.pinyin-input {
+    color: var(--hud-amber);
+    width: 100px;
+    flex-shrink: 0;
+  }
+  .preview-input.def-input {
+    flex: 1;
+    min-width: 0;
+  }
+  .preview-row.low-confidence {
+    border-left-color: var(--hud-amber);
+    background: rgba(255,170,34,0.04);
+  }
+
   .g-confirm-btn {
     width: 100%;
     padding: 14px;
@@ -1334,6 +1367,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -1484,10 +1518,19 @@
             <input type="file" id="import-file-input" accept=".txt,.csv,.md,.tsv,.docx,.doc,.pdf,.xlsx,.xls,.jpg,.jpeg,.png,.webp" style="display:none;"/>
           </div>
           <div id="import-file-info" style="display:none;margin-top:10px;text-align:center;"></div>
+          <div id="import-img-preview" style="display:none;margin-top:10px;text-align:center;">
+            <img id="import-img-thumb" style="max-width:100%;max-height:180px;object-fit:contain;border:1px solid var(--hull-edge);border-radius:4px;"/>
+          </div>
+          <div id="ocr-progress-wrap" style="display:none;margin-top:10px;">
+            <div class="progress-track" style="margin-bottom:6px;">
+              <div class="progress-fill" id="ocr-progress-fill" style="width:0%;"></div>
+            </div>
+            <div style="text-align:center;font-family:'Orbitron',monospace;font-size:0.5rem;color:var(--hud-cyan);letter-spacing:2px;" id="ocr-progress-label">SCANNING...</div>
+          </div>
           <div class="g-lookup-status" id="import-status"></div>
           <div id="import-preview" style="display:none;margin-top:12px;">
-            <div class="g-hint" style="margin-bottom:8px;">FOUND IN DICTIONARY — UNCHECK TO SKIP</div>
-            <div id="import-preview-list" style="max-height:200px;overflow-y:auto;margin-bottom:10px;"></div>
+            <div class="g-hint" style="margin-bottom:8px;" id="import-preview-hint">FOUND IN DICTIONARY — REVIEW &amp; EDIT BEFORE DEPLOYING</div>
+            <div id="import-preview-list" style="max-height:280px;overflow-y:auto;margin-bottom:10px;"></div>
             <button class="g-confirm-btn" id="import-confirm-btn" onclick="confirmImport()">⊕ DEPLOY SELECTED TO QUIZ</button>
           </div>
         </div>
@@ -1885,6 +1928,8 @@ function resetAddModal() {
   document.getElementById('import-file-info').style.display = 'none';
   document.getElementById('import-status').innerHTML = '';
   document.getElementById('import-preview').style.display = 'none';
+  document.getElementById('import-img-preview').style.display = 'none';
+  document.getElementById('ocr-progress-wrap').style.display = 'none';
   importedWords = [];
 }
 
@@ -1972,6 +2017,7 @@ async function bulkLookup() {
   for (const hanzi of newWords) {
     const result = await lookupGoogleTranslate(hanzi);
     if (result && result.english && !existing.has(hanzi)) {
+      result.english = cleanDefinition(correctSpelling(result.english));
       VOCAB.push(result);
       existing.add(hanzi);
       added++;
@@ -2038,6 +2084,30 @@ const SPELL_FIXES = {
   'alot':'a lot','dont':'don\'t','doesnt':'doesn\'t','cant':'can\'t','wont':'won\'t',
   'isnt':'isn\'t','wasnt':'wasn\'t','shouldnt':'shouldn\'t','couldnt':'couldn\'t',
   'wouldnt':'wouldn\'t','havent':'haven\'t','hasnt':'hasn\'t','didnt':'didn\'t','arent':'aren\'t',
+  'biolagy':'biology','pollo':'polo','batminton':'badminton','silvar':'silver','eygpt':'Egypt',
+  'pallace':'palace','raido':'radio','anartica':'Antarctica','bossom':'blossom',
+  'prism':'dumpling','tommorow':'tomorrow','vechicle':'vehicle','completly':'completely',
+  'extreemly':'extremely','comparetively':'comparatively','extersise':'exercise',
+  'pronenciation':'pronunciation','confortable':'comfortable','yougurt':'yogurt',
+  'pyrimids':'pyramids','pyrimid':'pyramid','laungage':'language','bialogy':'biology',
+  'calander':'calendar','goverment':'government','enviroment':'environment',
+  'restaruant':'restaurant','occassion':'occasion','independant':'independent',
+  'embarassed':'embarrassed','noticable':'noticeable','agressive':'aggressive',
+  'priviledge':'privilege','neccessary':'necessary','accomodate':'accommodate',
+  'occured':'occurred','acheive':'achieve','beleive':'believe','definately':'definitely',
+  'reccomend':'recommend','succesful':'successful','untill':'until','wierd':'weird',
+  'foriegn':'foreign','grammer':'grammar','begining':'beginning','buisness':'business',
+  'existance':'existence','relevent':'relevant','equiptment':'equipment',
+  'apparantly':'apparently','maintainance':'maintenance','occurance':'occurrence',
+  'tradtional':'traditional','beautifull':'beautiful','carefull':'careful',
+  'wonderfull':'wonderful','hapiness':'happiness','labatory':'laboratory',
+  'libary':'library','millenium':'millennium','paralel':'parallel',
+  'publically':'publicly','posession':'possession','persistant':'persistent',
+  'concious':'conscious','dissapear':'disappear','dissapoint':'disappoint',
+  'harrass':'harass','knowlege':'knowledge','lisence':'license','mispell':'misspell',
+  'neigbor':'neighbor','prefered':'preferred','refered':'referred','rythm':'rhythm',
+  'schedual':'schedule','suprise':'surprise','truely':'truly','writting':'writing',
+  'seperate':'separate','recieve':'receive',
 };
 
 function correctSpelling(text) {
@@ -2086,6 +2156,9 @@ function cleanDefinition(text) {
   if (!cleaned) cleaned = text.replace(/^[\(\[（]|[\)\]）]$/g, '').trim();
   // Remove double spaces left behind
   cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
+  // Remove any remaining orphaned parentheses/brackets
+  cleaned = cleaned.replace(/[\(\)（）\[\]]/g, '').trim();
+  cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
   // Capitalize proper nouns
   for (const noun of PROPER_NOUNS) {
     const regex = new RegExp('\\b' + noun.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
@@ -2103,19 +2176,67 @@ function cleanDefinition(text) {
 
 function validateVocabFields(item) {
   let { hanzi, pinyin, english } = item;
-  // If english looks like pinyin, and pinyin looks like english (or empty), swap them
-  if (english && looksLikePinyin(english)) {
-    if (!pinyin || !looksLikePinyin(pinyin)) {
-      const temp = pinyin;
-      pinyin = english;
-      english = temp || null;
+  
+  const pinyinSylRe = /^(zh|ch|sh|[bpmfdtnlgkhjqxrzcsyw])?(a|ai|an|ang|ao|e|ei|en|eng|er|i|ia|ian|iang|iao|ie|in|ing|iong|iu|o|ong|ou|u|ua|uai|uan|uang|ue|ui|un|uo|v|ve)n?g?r?$/i;
+  const hasToneRe = /[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/;
+  
+  const pinyinScore = (text) => {
+    if (!text) return 0;
+    const words = text.split(/[\s,;/]+/).filter(w => w && w.length > 0);
+    if (words.length === 0) return 0;
+    let pyCount = 0;
+    words.forEach(w => {
+      const norm = w.toLowerCase().replace(/[āáǎà]/g,'a').replace(/[ēéěè]/g,'e').replace(/[īíǐì]/g,'i').replace(/[ōóǒò]/g,'o').replace(/[ūúǔù]/g,'u').replace(/[ǖǘǚǜ]/g,'v');
+      if (hasToneRe.test(w)) pyCount++;
+      else if (pinyinSylRe.test(norm) && /^[A-Z]/.test(w)) pyCount++; // Only count as pinyin if Capitalized
+    });
+    return pyCount / words.length;
+  };
+
+  // Check if text contains CamelCase pinyin pattern (XiaoJie, DianShiJu, etc.)
+  const isCamelPinyin = (text) => {
+    if (!text) return false;
+    return /^[A-Z][a-z]+([A-Z][a-z]+)+$/.test(text.replace(/\s+/g, ''));
+  };
+
+  // Only swap when we're very confident the fields are wrong:
+  // - English has tone marks (definitely pinyin)
+  // - English is CamelCase pinyin pattern with no spaces
+  // - Pinyin contains multiple real English words with spaces
+  
+  if (english && pinyin) {
+    const engHasTones = hasToneRe.test(english);
+    const pyHasTones = hasToneRe.test(pinyin);
+    const engIsCamel = isCamelPinyin(english);
+    const pyIsCamel = isCamelPinyin(pinyin);
+    
+    // Definite swap: English has tone marks but pinyin doesn't
+    if (engHasTones && !pyHasTones) {
+      const temp = pinyin; pinyin = english; english = temp;
+    }
+    // Definite swap: English is CamelCase pinyin, pinyin has spaces and lowercase words
+    else if (engIsCamel && !pyIsCamel && /\s/.test(pinyin)) {
+      const temp = pinyin; pinyin = english; english = temp;
+    }
+    // Definite swap: English is ALL valid pinyin syllables (Capitalized) and pinyin has lowercase multi-word English
+    else if (pinyinScore(english) >= 1.0 && pinyinScore(pinyin) === 0) {
+      const temp = pinyin; pinyin = english; english = temp;
+    }
+  } else if (english && !pinyin) {
+    // Only one field: check if it's pinyin
+    if (hasToneRe.test(english) || isCamelPinyin(english)) {
+      pinyin = english; english = null;
+    } else if (pinyinScore(english) >= 1.0 && !/ /.test(english)) {
+      // Single word, all pinyin syllables, capitalized
+      pinyin = english; english = null;
+    }
+  } else if (pinyin && !english) {
+    // Only one field assigned as pinyin: check if it's actually English
+    if (!hasToneRe.test(pinyin) && !isCamelPinyin(pinyin) && pinyinScore(pinyin) === 0) {
+      english = pinyin; pinyin = null;
     }
   }
-  // If pinyin has real English in it and english is empty
-  if (pinyin && !english && !looksLikePinyin(pinyin) && /\s/.test(pinyin) && /^[a-z]/.test(pinyin)) {
-    english = pinyin;
-    pinyin = null;
-  }
+
   // Correct spelling and clean up English definition
   if (english) english = cleanDefinition(correctSpelling(english));
   return { hanzi, pinyin, english };
@@ -2179,6 +2300,138 @@ document.getElementById('import-file-input').addEventListener('change', e => {
 
 let importedWords = [];
 
+// =================== OCR COLUMN DETECTION ===================
+// Takes Tesseract word boxes {text, bbox:{x0,y0,x1,y1}} and reconstructs
+// {hanzi, pinyin, english} rows using column position detection,
+// mirroring the approach used for PDF/Excel imports.
+function ocrWordsToRows(words) {
+  const CJK = /[\u2E80-\u2FDF\u3400-\u4dbf\u4e00-\u9fff\uF900-\uFAFF]/;
+  const clean = words
+    .map(w => ({ text: w.text.trim(), x0: w.bbox.x0, x1: w.bbox.x1, y0: w.bbox.y0, y1: w.bbox.y1, yc: (w.bbox.y0 + w.bbox.y1) / 2 }))
+    .filter(w => w.text);
+
+  if (clean.length === 0) return [];
+
+  // ---- Step 1: Try to find header row (中文字/中文/Chinese, 拼音/Pinyin, 英文/English) ----
+  const headerWords = { chinese: /^(中文字?|汉字|生词|词汇|chinese)$/i, pinyin: /^(拼音|pinyin|pinying)$/i, english: /^(英文|english)$/i };
+  let colBounds = null; // { pinyinStartX, englishStartX }
+
+  // Group into lines first to scan for header
+  const avgHeight = clean.reduce((s, w) => s + (w.y1 - w.y0), 0) / clean.length;
+  const lineTol = Math.max(avgHeight * 0.6, 8);
+
+  const linesForHeader = groupIntoLines(clean, lineTol);
+  for (const line of linesForHeader) {
+    const sorted = line.slice().sort((a, b) => a.x0 - b.x0);
+    let pyX = null, enX = null, foundChinese = false;
+    sorted.forEach(w => {
+      if (headerWords.chinese.test(w.text)) foundChinese = true;
+      if (headerWords.pinyin.test(w.text)) pyX = w.x0;
+      if (headerWords.english.test(w.text)) enX = w.x0;
+    });
+    if (foundChinese && pyX !== null && enX !== null) {
+      colBounds = { pinyinStartX: pyX, englishStartX: enX };
+      break;
+    }
+  }
+
+  // ---- Step 2: If no header found, estimate columns from content distribution ----
+  if (!colBounds) {
+    // Cluster all X start positions to find up to 3 column groups
+    const xs = clean.map(w => w.x0).sort((a, b) => a - b);
+    const clusters = [];
+    xs.forEach(x => {
+      const last = clusters[clusters.length - 1];
+      if (last && x - last.max < (last.max - last.min + 40)) {
+        last.min = Math.min(last.min, x);
+        last.max = Math.max(last.max, x);
+        last.count++;
+      } else {
+        clusters.push({ min: x, max: x, count: 1 });
+      }
+    });
+    const significant = clusters.filter(c => c.count >= 2).sort((a, b) => a.min - b.min);
+    if (significant.length >= 3) {
+      colBounds = { pinyinStartX: significant[1].min - 15, englishStartX: significant[2].min - 15 };
+    } else if (significant.length === 2) {
+      colBounds = { pinyinStartX: null, englishStartX: significant[1].min - 15 };
+    } else {
+      colBounds = { pinyinStartX: null, englishStartX: null };
+    }
+  }
+
+  // ---- Step 3: Group all words into lines (rows) ----
+  const lines = groupIntoLines(clean, lineTol);
+
+  // ---- Step 4: For each line, split into Chinese / Pinyin / English by X position ----
+  const skipWords = new Set(['中文字', '中文', '拼音', '英文', '汉字', 'chinese', 'pinyin', 'pinying', 'english', '名字', '姓名']);
+  const rows = [];
+
+  lines.forEach(line => {
+    const sorted = line.slice().sort((a, b) => a.x0 - b.x0);
+    const lineText = sorted.map(w => w.text).join('');
+    // Skip lines that are just the header or a name field
+    if (sorted.length <= 3 && sorted.every(w => skipWords.has(w.text.toLowerCase()) || skipWords.has(w.text))) return;
+    if (/^(名字|B\d|L\d).*[:：]/.test(lineText)) return; // e.g. "名字: Theo" or "B2 L1..."
+
+    const cjkWords = sorted.filter(w => CJK.test(w.text));
+    const latinWords = sorted.filter(w => !CJK.test(w.text));
+
+    const hanzi = cjkWords.map(w => w.text).join('').replace(/[^\u2E80-\u2FDF\u3400-\u4dbf\u4e00-\u9fff\uF900-\uFAFF]/g, '');
+    if (!hanzi || hanzi.length > 15) return;
+    if (skipWords.has(hanzi)) return;
+
+    let pinyin = '', english = '';
+    if (colBounds.englishStartX !== null) {
+      const pyPart = latinWords.filter(w => w.x0 < colBounds.englishStartX);
+      const enPart = latinWords.filter(w => w.x0 >= colBounds.englishStartX);
+      pinyin = pyPart.map(w => w.text).join(' ').trim();
+      english = enPart.map(w => w.text).join(' ').trim();
+    } else {
+      // No clear column split — treat all latin as pinyin if short, else english
+      const allLatin = latinWords.map(w => w.text).join(' ').trim();
+      if (allLatin.split(/\s+/).length <= 3 && /^[a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ\s]+$/.test(allLatin)) {
+        pinyin = allLatin;
+      } else {
+        english = allLatin;
+      }
+    }
+
+    // Strip trailing row numbers (OCR often reads the numbered list column, e.g. "1", "12")
+    english = english.replace(/\s+\d{1,2}$/, '').trim();
+    pinyin = pinyin.replace(/\s+\d{1,2}$/, '').trim();
+
+    rows.push({ hanzi, pinyin: pinyin || null, english: english || null });
+  });
+
+  return rows;
+}
+
+// Groups OCR words into horizontal lines by Y-center proximity
+function groupIntoLines(words, tolerance) {
+  const sorted = words.slice().sort((a, b) => a.yc - b.yc);
+  const lines = [];
+  sorted.forEach(w => {
+    let placed = false;
+    for (const line of lines) {
+      const lineYC = line.reduce((s, x) => s + x.yc, 0) / line.length;
+      if (Math.abs(w.yc - lineYC) <= tolerance) {
+        line.push(w);
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) lines.push([w]);
+  });
+  // Sort lines top to bottom
+  lines.sort((a, b) => {
+    const ay = a.reduce((s, x) => s + x.yc, 0) / a.length;
+    const by = b.reduce((s, x) => s + x.yc, 0) / b.length;
+    return ay - by;
+  });
+  return lines;
+}
+
 async function handleImportFile(file) {
   const info = document.getElementById('import-file-info');
   const status = document.getElementById('import-status');
@@ -2197,223 +2450,248 @@ async function handleImportFile(file) {
   info.style.display = 'block';
 
   if (isImage) {
-    status.innerHTML = '<span style="color:var(--hud-cyan);">SCANNING IMAGE FOR CHINESE TEXT...</span>';
+    // Show image preview immediately
+    const imgPreview = document.getElementById('import-img-preview');
+    const imgThumb = document.getElementById('import-img-thumb');
+    const objUrl = URL.createObjectURL(file);
+    imgThumb.src = objUrl;
+    imgPreview.style.display = 'block';
+
+    const progWrap = document.getElementById('ocr-progress-wrap');
+    const progFill = document.getElementById('ocr-progress-fill');
+    const progLabel = document.getElementById('ocr-progress-label');
+    progWrap.style.display = 'block';
+    progFill.style.width = '0%';
+    progLabel.textContent = 'LOADING OCR ENGINE...';
+    status.innerHTML = '';
+
     try {
-      const b64 = await fileToBase64(file);
-      const mt = file.type || 'image/jpeg';
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514', max_tokens: 1000,
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'image', source: { type: 'base64', media_type: mt, data: b64 } },
-              { type: 'text', text: 'Extract ALL Chinese words/vocabulary visible in this image. Return ONLY a JSON array of strings, e.g. ["你好","谢谢","再见"]. No markdown, no explanation, just the JSON array of Chinese words.' }
-            ]
-          }]
-        })
+      const worker = await Tesseract.createWorker(['chi_sim', 'eng'], 1, {
+        workerBlobURL: false,
+        workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
+        logger: m => {
+          if (m.status === 'recognizing text') {
+            const pct = Math.round((m.progress || 0) * 100);
+            progFill.style.width = pct + '%';
+            progLabel.textContent = `SCANNING TEXT... ${pct}%`;
+          } else if (m.status) {
+            progLabel.textContent = m.status.toUpperCase().replace(/_/g, ' ');
+          }
+        }
       });
-      if (!resp.ok) throw new Error('API error');
-      const data = await resp.json();
-      const text = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
-      const clean = text.replace(/```json|```/g, '').trim();
-      const match = clean.match(/\[[\s\S]*\]/);
-      if (match) {
-        const arr = JSON.parse(match[0]);
-        const chineseWords = arr.filter(w => typeof w === 'string' && /[\u2E80-\u2FDF\u3400-\u4dbf\u4e00-\u9fff\uF900-\uFAFF]/.test(w));
-        await processExtractedChinese(chineseWords.map(w => ({hanzi: w, pinyin: null, english: null})), status);
-      } else {
-        throw new Error('No words found');
+
+      const { data } = await worker.recognize(file);
+      await worker.terminate();
+      progWrap.style.display = 'none';
+
+      const words = (data.words || []).filter(w => w.text && w.text.trim());
+      if (words.length === 0) {
+        status.innerHTML = '<span class="error">⚠ NO TEXT DETECTED IN IMAGE — try a clearer photo or better lighting</span>';
+        return;
       }
+
+      const rows = ocrWordsToRows(words);
+      if (rows.length === 0) {
+        status.innerHTML = '<span class="error">⚠ NO CHINESE VOCABULARY FOUND — try cropping tighter to the word list</span>';
+        return;
+      }
+
+      // Run through validation + dedup against existing vocab
+      const existing = new Set(VOCAB.map(v => v.hanzi));
+      const cleaned = [];
+      const seen = new Set();
+      rows.forEach(r => {
+        if (!r.hanzi || seen.has(r.hanzi) || existing.has(r.hanzi)) return;
+        seen.add(r.hanzi);
+        cleaned.push(validateVocabFields(r));
+      });
+
+      if (cleaned.length === 0) {
+        status.innerHTML = '<span style="color:var(--hud-amber);">ALL DETECTED WORDS ALREADY IN DATABASE</span>';
+        return;
+      }
+
+      status.innerHTML = `<span class="success">${cleaned.length} WORD${cleaned.length !== 1 ? 'S' : ''} DETECTED</span> <span style="color:rgba(200,204,216,0.4);font-size:0.75rem;">— OCR on handwriting isn't perfect, review &amp; edit below before deploying</span>`;
+      showEditablePreview(cleaned, true);
     } catch (err) {
-      status.innerHTML = '<span class="error">⚠ COULD NOT SCAN IMAGE — Image scanning requires network access.<br>TIP: Type the Chinese words from the image into the fields above instead.</span>';
+      progWrap.style.display = 'none';
+      const msg = err.message || '';
+      if (/Worker|blob-request/i.test(msg)) {
+        status.innerHTML = '<span class="error">⚠ OCR IS BLOCKED IN THIS PREVIEW SANDBOX<br>This works once the app is hosted on GitHub Pages (or any normal website) — the sandbox here blocks the background worker OCR needs.<br>TIP: Type the words from the image into the fields above instead.</span>';
+      } else {
+        status.innerHTML = '<span class="error">⚠ OCR FAILED — ' + msg + '<br>TIP: Type the words from the image into the fields above instead.</span>';
+      }
     }
   } else if (isPdf) {
-    status.innerHTML = '<span style="color:var(--hud-cyan);">READING PDF DOCUMENT...</span>';
+    status.innerHTML = '<span style="color:var(--hud-cyan);">CONVERTING PDF TO SPREADSHEET...</span>';
     try {
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      const allResults = [];
-      const skipText = new Set(['video vocab','chinese','pinyin','pinying','english','vocab','']);
+      const CJK = /[\u2E80-\u2FDF\u3400-\u4dbf\u4e00-\u9fff\uF900-\uFAFF]/;
+      const SKIP = (t) => {
+        const s = t.trim().toLowerCase();
+        return !s || /^\d+$/.test(s) || /^(chinese|pinyin|pinying|english)$/i.test(s)
+          || /^chinese\s+(pinyin|pinying)\s+english$/i.test(s)
+          || /^(finals?\s+notebook|video|text|lesson|unit|chapter|notebook)\s*(vocab|vocabulary|\d)/i.test(s)
+          || /^(vocab|vocabulary)$/i.test(s);
+      };
+
+      // ---- STEP 1: Find column boundaries from header ----
+      // Scan first page for "Pinying"/"Pinyin" and "English" header positions
+      let pyStartX = 200, enStartX = 350; // defaults
+      const firstPage = await pdf.getPage(1);
+      const firstContent = await firstPage.getTextContent();
+      
+      // Group first page items by Y to find header line
+      const headerLines = {};
+      firstContent.items.forEach(it => {
+        if (!it.str.trim()) return;
+        const yKey = Math.round(it.transform[5] / 6) * 6;
+        if (!headerLines[yKey]) headerLines[yKey] = [];
+        headerLines[yKey].push({ x: it.transform[4], str: it.str.trim() });
+      });
+
+      for (const y of Object.keys(headerLines).sort((a,b) => b - a)) {
+        const lineText = headerLines[y].map(it => it.str).join('');
+        if (/Pinyin|Pinying/i.test(lineText) && /English/i.test(lineText)) {
+          // Found header — get X positions of each header word
+          const sorted = headerLines[y].sort((a,b) => a.x - b.x);
+          // Build words from characters with gaps
+          const words = [];
+          let cur = { x: sorted[0].x, text: sorted[0].str };
+          for (let i = 1; i < sorted.length; i++) {
+            if (sorted[i].x - (cur.x + cur.text.length * 6) > 10) {
+              words.push(cur);
+              cur = { x: sorted[i].x, text: sorted[i].str };
+            } else {
+              cur.text += sorted[i].str;
+            }
+          }
+          words.push(cur);
+          
+          for (const w of words) {
+            if (/^Pinyin|^Pinying/i.test(w.text)) pyStartX = w.x;
+            if (/^English/i.test(w.text)) enStartX = w.x;
+          }
+          break;
+        }
+      }
+
+      // ---- STEP 2: Process all pages — collect lines classified by type ----
+      const allLines = []; // { type: 'chinese'|'latin'|'mixed', chinese, pinyin, english }
 
       for (let p = 1; p <= pdf.numPages; p++) {
         const page = await pdf.getPage(p);
         const content = await page.getTextContent();
         if (!content.items.length) continue;
 
-        // Collect items with position
-        const items = content.items
-          .filter(it => it.str.trim())
-          .map(it => ({ x: it.transform[4], y: it.transform[5], str: it.str.trim() }));
+        const items = content.items.filter(it => it.str.trim()).map(it => ({
+          x: it.transform[4], y: it.transform[5], str: it.str.trim()
+        }));
 
-        // ---- Step 1: Cluster X positions into columns ----
-        const xVals = items.map(it => Math.round(it.x)).sort((a,b) => a-b);
-        const columns = [];
-        xVals.forEach(x => {
-          const last = columns[columns.length - 1];
-          if (last && Math.abs(x - last.avg) < 50) {
-            last.vals.push(x);
-            last.avg = last.vals.reduce((a,b)=>a+b,0) / last.vals.length;
-          } else {
-            columns.push({ avg: x, vals: [x] });
-          }
-        });
-        // Only keep columns with multiple items (filter noise)
-        const realCols = columns.filter(c => c.vals.length >= 3).sort((a,b) => a.avg - b.avg);
-        if (realCols.length < 2) {
-          // Fallback to text extraction
-          const text = items.map(it => it.str).join('\n');
-          allResults.push(...extractChineseFromText(text));
-          continue;
-        }
-
-        // ---- Step 2: Assign items to columns ----
-        const assignCol = (x) => {
-          let best = 0, bestD = Infinity;
-          realCols.forEach((c, i) => { const d = Math.abs(x - c.avg); if (d < bestD) { bestD = d; best = i; } });
-          return best;
-        };
-
-        // ---- Step 3: Identify which column is Chinese ----
-        const colContent = realCols.map(() => ({ chinese: 0, latin: 0 }));
+        // Group by Y position into lines
+        const lineMap = {};
         items.forEach(it => {
-          const col = assignCol(it.x);
-          if (/[\u2E80-\u2FDF\u3400-\u4dbf\u4e00-\u9fff\uF900-\uFAFF]/.test(it.str)) colContent[col].chinese++;
-          else if (/[a-zA-Z]/.test(it.str)) colContent[col].latin++;
-        });
-        
-        // Chinese column = the one with most Chinese characters
-        let chineseColIdx = 0;
-        colContent.forEach((c, i) => { if (c.chinese > colContent[chineseColIdx].chinese) chineseColIdx = i; });
-
-        // Remaining columns sorted left-to-right are pinyin then english
-        const latinCols = realCols.map((_, i) => i).filter(i => i !== chineseColIdx).sort((a,b) => realCols[a].avg - realCols[b].avg);
-        const pinyinColIdx = latinCols[0] ?? null;
-        const englishColIdx = latinCols[1] ?? null;
-
-        // ---- Step 4: Group by Y row and extract ----
-        const rowMap = {};
-        items.forEach(it => {
-          const yKey = Math.round(it.y / 6) * 6; // group within 6px
-          const col = assignCol(it.x);
-          if (!rowMap[yKey]) rowMap[yKey] = {};
-          if (!rowMap[yKey][col]) rowMap[yKey][col] = [];
-          rowMap[yKey][col].push(it.str);
+          const yKey = Math.round(it.y / 5) * 5;
+          if (!lineMap[yKey]) lineMap[yKey] = [];
+          lineMap[yKey].push(it);
         });
 
-        const sortedRows = Object.keys(rowMap).map(Number).sort((a,b) => b - a);
-        sortedRows.forEach(y => {
-          const row = rowMap[y];
-          const chineseText = (row[chineseColIdx] || []).join('');
-          const hanzi = chineseText.replace(/[^\u2E80-\u2FDF\u3400-\u4dbf\u4e00-\u9fff\uF900-\uFAFF]/g, '');
-          if (!hanzi || hanzi.length > 20) return;
-          if (skipText.has(hanzi)) return;
+        const sortedYs = Object.keys(lineMap).map(Number).sort((a,b) => b - a);
+        for (const y of sortedYs) {
+          const lineItems = lineMap[y].sort((a,b) => a.x - b.x);
+          const fullText = lineItems.map(it => it.str).join(' ').trim();
+          if (SKIP(fullText)) continue;
 
-          let pinyin = pinyinColIdx !== null ? (row[pinyinColIdx] || []).join(' ').trim() : null;
-          let english = englishColIdx !== null ? (row[englishColIdx] || []).join(' ').trim() : null;
+          const hasCJK = CJK.test(fullText);
+          const hasLatin = /[a-zA-Z]{2,}/.test(fullText);
 
-          // If only 2 columns, the latin column has "Pinyin English" combined
-          if (englishColIdx === null && pinyin) {
-            // Split pinyin column into pinyin + english
-            const words = pinyin.split(/\s+/);
-            const py = [], eng = [];
-            let switched = false;
-            words.forEach(w => {
-              if (switched) { eng.push(w); return; }
-              if (/^[A-Z][a-zA-Z]*$/.test(w) || /[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/.test(w)) { py.push(w); }
-              else { switched = true; eng.push(w); }
-            });
-            if (eng.length) { pinyin = py.join(' '); english = eng.join(' '); }
-          }
-
-          // Skip headers
-          if (pinyin && skipText.has(pinyin.toLowerCase())) pinyin = null;
-          if (english && skipText.has(english.toLowerCase())) english = null;
-          if (/^\d+$/.test(hanzi)) return;
-
-          allResults.push(validateVocabFields({ hanzi, pinyin: pinyin || null, english: english || null }));
-        });
-      }
-
-      // ---- Step 5: For unmatched rows, try order-based matching ----
-      // Collect Chinese-only entries and Latin-only entries in page order
-      // and try to pair them if position matching failed
-      const unmatched = allResults.filter(r => !r.english && !r.pinyin);
-      if (unmatched.length > 0) {
-        // Re-extract all text and try line-by-line pairing
-        let fullText = '';
-        for (let p = 1; p <= pdf.numPages; p++) {
-          const page = await pdf.getPage(p);
-          const content = await page.getTextContent();
-          content.items.forEach(it => { if (it.str.trim()) fullText += it.str.trim() + '\n'; });
-        }
-        // Collect pinyin+english lines (latin text with spaces)
-        const latinLines = fullText.split('\n')
-          .map(l => l.trim())
-          .filter(l => l && /[a-zA-Z]{2,}/.test(l) && !/^(video vocab|chinese|pinyin|pinying|english|\d+)$/i.test(l));
-        // Collect chinese lines
-        const chineseLines = fullText.split('\n')
-          .map(l => l.replace(/[^\u2E80-\u2FDF\u3400-\u4dbf\u4e00-\u9fff\uF900-\uFAFF]/g, '').trim())
-          .filter(l => l && l.length <= 20 && !skipText.has(l));
-
-        // Build a map: for each chinese word, find its index in chineseLines,
-        // then use that index into latinLines
-        if (chineseLines.length > 0 && latinLines.length > 0) {
-          unmatched.forEach(item => {
-            const idx = chineseLines.indexOf(item.hanzi);
-            if (idx >= 0 && idx < latinLines.length) {
-              const line = latinLines[idx];
-              // Parse: first part is pinyin (capitalized), rest is english
-              const words = line.split(/\s+/);
-              const py = [], eng = [];
-              let switched = false;
-              words.forEach(w => {
-                if (switched) { eng.push(w); return; }
-                if (/^[A-Z][a-zA-Z]*$/.test(w) || /^[a-z]{1,3}$/.test(w) && py.length > 0) { py.push(w); }
-                else { switched = true; eng.push(w); }
-              });
-              // Update the item in allResults
-              if (eng.length) {
-                item.pinyin = py.join(' ') || null;
-                item.english = eng.join(' ') || null;
-              } else if (py.length) {
-                item.pinyin = py.join(' ') || null;
-              }
+          if (hasCJK && !hasLatin) {
+            // Pure Chinese line
+            const hanzi = fullText.replace(/[^\u2E80-\u2FDF\u3400-\u4dbf\u4e00-\u9fff\uF900-\uFAFF]/g, '');
+            if (hanzi && hanzi.length <= 20) {
+              allLines.push({ type: 'chinese', chinese: hanzi, pinyin: '', english: '' });
             }
-          });
+          } else if (hasLatin && !hasCJK) {
+            // Pure Latin line — split into pinyin/English by X position
+            const pyChars = lineItems.filter(it => it.x < enStartX - 10).map(it => it.str).join('').trim();
+            const enChars = lineItems.filter(it => it.x >= enStartX - 10).map(it => it.str).join('').trim();
+            if (!SKIP(pyChars + ' ' + enChars)) {
+              allLines.push({ type: 'latin', chinese: '', pinyin: pyChars, english: enChars });
+            }
+          } else if (hasCJK && hasLatin) {
+            // Mixed line — split by character type AND X position
+            const cjkChars = lineItems.filter(it => CJK.test(it.str));
+            const latinPy = lineItems.filter(it => !CJK.test(it.str) && it.x >= pyStartX - 10 && it.x < enStartX - 10);
+            const latinEn = lineItems.filter(it => !CJK.test(it.str) && it.x >= enStartX - 10);
+            
+            const hanzi = cjkChars.map(it => it.str).join('').replace(/[^\u2E80-\u2FDF\u3400-\u4dbf\u4e00-\u9fff\uF900-\uFAFF]/g, '');
+            const pinyin = latinPy.map(it => it.str).join('').trim();
+            const english = latinEn.map(it => it.str).join('').trim();
+            
+            if (hanzi && hanzi.length <= 20) {
+              allLines.push({ type: 'mixed', chinese: hanzi, pinyin, english });
+            }
+          }
         }
       }
 
-      // Validate all fields before dedup
-      allResults.forEach((item, i) => {
-        const fixed = validateVocabFields(item);
-        allResults[i] = fixed;
+      // ---- STEP 3: Merge consecutive Chinese + Latin lines ----
+      const merged = [];
+      let i = 0;
+      while (i < allLines.length) {
+        const line = allLines[i];
+        if (line.type === 'chinese' && i + 1 < allLines.length && allLines[i + 1].type === 'latin') {
+          // Pair Chinese line with following Latin line
+          merged.push({
+            chinese: line.chinese,
+            pinyin: allLines[i + 1].pinyin,
+            english: allLines[i + 1].english
+          });
+          i += 2;
+        } else if (line.type === 'mixed') {
+          merged.push({ chinese: line.chinese, pinyin: line.pinyin, english: line.english });
+          i += 1;
+        } else if (line.type === 'chinese') {
+          // Chinese with no following Latin — still include it (Google Translate will fill)
+          merged.push({ chinese: line.chinese, pinyin: '', english: '' });
+          i += 1;
+        } else {
+          // Orphan Latin line — skip
+          i += 1;
+        }
+      }
+
+      // ---- STEP 4: Process merged rows like Excel import ----
+      const allResults = [];
+      const skipText = new Set(['\u4e2d\u6587','\u82f1\u6587','\u53e5\u5b50','\u62fc\u97f3']);
+
+      merged.forEach(row => {
+        const hanzi = row.chinese;
+        if (!hanzi) return;
+
+        let pinyin = row.pinyin || null;
+        let english = row.english || null;
+
+        // Clean: if english looks like pinyin (CamelCase/tonemarks), clear it
+        if (english) {
+          const noSpace = english.replace(/\s+/g, '');
+          const isCamel = /^[A-Z][a-z]+([A-Z][a-z]+)+$/.test(noSpace);
+          const hasTones = /[\u0101\u00e1\u01ce\u00e0\u0113\u00e9\u011b\u00e8\u012b\u00ed\u01d0\u00ec\u014d\u00f3\u01d2\u00f2\u016b\u00fa\u01d4\u00f9\u01d6\u01d8\u01da\u01dc]/.test(english);
+          if (isCamel || hasTones) english = null;
+          if (pinyin && english && pinyin.toLowerCase().replace(/\s/g,'') === english.toLowerCase().replace(/\s/g,'')) english = null;
+        }
+
+        allResults.push(validateVocabFields({ hanzi, pinyin, english }));
       });
 
       // Deduplicate
       const seen = new Set();
-      const deduped = allResults.filter(item => {
-        if (seen.has(item.hanzi)) return false;
-        seen.add(item.hanzi);
-        return true;
-      });
+      const deduped = allResults.filter(item => { if (seen.has(item.hanzi)) return false; seen.add(item.hanzi); return true; });
 
       await processExtractedChinese(deduped, status);
     } catch (err) {
       status.innerHTML = '<span class="error">⚠ COULD NOT READ PDF FILE</span>';
-    }
-  } else if (isDocx) {
-    status.innerHTML = '<span style="color:var(--hud-cyan);">READING WORD DOCUMENT...</span>';
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const result = await mammoth.extractRawText({ arrayBuffer });
-      const rawText = result.value;
-      const extracted = extractChineseFromText(rawText);
-      await processExtractedChinese(extracted, status);
-    } catch (err) {
-      status.innerHTML = '<span class="error">⚠ COULD NOT READ DOCX FILE</span>';
     }
   } else if (isXlsx) {
     status.innerHTML = '<span style="color:var(--hud-cyan);">READING EXCEL FILE...</span>';
@@ -2468,6 +2746,20 @@ async function handleImportFile(file) {
           if (pinyin && skipText.has(pinyin.toLowerCase())) pinyin = null;
           if (english && skipText.has(english.toLowerCase())) english = null;
 
+          // If pinyin and English are the same, clear English
+          if (pinyin && english) {
+            const pyNorm = pinyin.toLowerCase().replace(/\s+/g, '');
+            const engNorm = english.toLowerCase().replace(/\s+/g, '');
+            if (pyNorm === engNorm) english = null;
+          }
+          // If English looks like pinyin (CamelCase or tone marks), clear or swap
+          if (english && pinyin) {
+            const engNospaces = english.replace(/\s+/g, '');
+            const isCamel = /^[A-Z][a-z]+([A-Z][a-z]+)+$/.test(engNospaces);
+            const hasTones = /[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/.test(english);
+            if (isCamel || hasTones) english = null;
+          }
+
           allResults.push(validateVocabFields({ hanzi, pinyin: pinyin || null, english: english || null }));
         });
       });
@@ -2479,6 +2771,17 @@ async function handleImportFile(file) {
       await processExtractedChinese(deduped, status);
     } catch (err) {
       status.innerHTML = '<span class="error">⚠ COULD NOT READ EXCEL FILE</span>';
+    }
+  } else if (isDocx) {
+    status.innerHTML = '<span style="color:var(--hud-cyan);">READING WORD DOCUMENT...</span>';
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      const rawText = result.value;
+      const extracted = extractChineseFromText(rawText);
+      await processExtractedChinese(extracted, status);
+    } catch (err) {
+      status.innerHTML = '<span class="error">⚠ COULD NOT READ DOCX FILE</span>';
     }
   } else if (isText) {
     status.innerHTML = '<span style="color:var(--hud-cyan);">READING TEXT FILE...</span>';
@@ -2555,24 +2858,23 @@ function extractChineseFromText(text) {
         // Single block — try to detect where pinyin ends and English starts
         // Pinyin words are typically capitalized short syllables
         const words = latinPart.split(/\s+/);
+        const pinyinSyl = /^(zh|ch|sh|[bpmfdtnlgkhjqxrzcsyw])?(a|ai|an|ang|ao|e|ei|en|eng|er|i|ia|ian|iang|iao|ie|in|ing|iong|iu|o|ong|ou|u|ua|uai|uan|uang|ue|ui|un|uo|v|ve|ü|üe)n?g?r?$/i;
+        const hasToneRe = /[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/;
+        const commonEng = new Set(['a','an','the','to','of','is','not','too','one','two','and','or','in','on','at','it','my','no','do','go','up','be','he','we','if','all','ice','tv','for','get','out','off','can','may','let','put','set','run','old','new','big','fun','hot','wet','dry','bad','bus','bed','bag','box','cup','car','map','eat','cut','hit','sit','kid','mid','man','men','how','has','had','his','her','him','its','our','use','way','day','eye','ear','arm','leg','top','end','red','key','hat','pet','pen','fat','fit','bit','lot','got','did','was','are','but','yet','per','via','etc']);
         const pinyinWords = [];
         const engWords = [];
         let switchedToEng = false;
 
         for (const w of words) {
           if (switchedToEng) { engWords.push(w); continue; }
-          // Pinyin: starts with uppercase, short, looks like a syllable
-          // Or contains tone marks
-          const isPinyinLike = /^[A-Z][a-zA-Z]{0,6}$/.test(w) || /[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/.test(w);
-          const isEngLike = /^(a|an|the|to|of|is|not|too|one|two|and|or|in|on|at|it|my|no|do|go|up|be|he|we|if)$/i.test(w)
-            || /^[a-z]{3,}/.test(w);
-
-          if (isPinyinLike && !isEngLike) {
-            pinyinWords.push(w);
-          } else {
-            switchedToEng = true;
-            engWords.push(w);
-          }
+          const wNorm = w.toLowerCase().replace(/[āáǎà]/g,'a').replace(/[ēéěè]/g,'e').replace(/[īíǐì]/g,'i').replace(/[ōóǒò]/g,'o').replace(/[ūúǔù]/g,'u').replace(/[ǖǘǚǜ]/g,'v');
+          const hasTone = hasToneRe.test(w);
+          const looksPy = hasTone || pinyinSyl.test(wNorm) || /^[A-Z][a-z]{0,7}$/.test(w);
+          const isCommonEng = commonEng.has(w.toLowerCase());
+          if (hasTone) { pinyinWords.push(w); }
+          else if (looksPy && !isCommonEng) { pinyinWords.push(w); }
+          else if (pinyinWords.length > 0 && w.length <= 2 && !isCommonEng) { pinyinWords.push(w); }
+          else { switchedToEng = true; engWords.push(w); }
         }
         pinyin = pinyinWords.join(' ');
         english = engWords.join(' ');
@@ -2623,7 +2925,7 @@ async function processExtractedChinese(chineseItems, status) {
       found.push({
         hanzi: item.hanzi,
         pinyin: item.pinyin || null,
-        english: item.english
+        english: cleanDefinition(correctSpelling(item.english))
       });
     } else {
       needLookup.push(item);
@@ -2639,7 +2941,7 @@ async function processExtractedChinese(chineseItems, status) {
         found.push({
           hanzi: item.hanzi,
           pinyin: item.pinyin || gt.pinyin,
-          english: gt.english
+          english: cleanDefinition(correctSpelling(gt.english))
         });
       }
     }
@@ -2669,39 +2971,64 @@ async function processExtractedChinese(chineseItems, status) {
   status.innerHTML = msg;
 
   if (found.length > 0) {
-    importedWords = found;
-    const list = document.getElementById('import-preview-list');
-    list.innerHTML = '';
-    found.forEach((w, i) => {
-      const row = document.createElement('div');
-      row.className = 'preview-row';
-      row.innerHTML = `
-        <input type="checkbox" id="imp-${i}" checked/>
-        <span class="preview-hanzi">${w.hanzi}</span>
-        <span class="preview-pinyin">${w.pinyin || '?'}</span>
-        <span class="preview-def">${w.english || '?'}</span>`;
-      list.appendChild(row);
-    });
-    document.getElementById('import-preview').style.display = 'block';
+    showEditablePreview(found, false);
   }
 }
 
+// =================== EDITABLE PREVIEW ===================
+// Renders import results as an editable list — each field can be corrected
+// before deploying. Used for OCR (where accuracy matters most) and all
+// other file imports so any extraction mistake can be fixed inline.
+function showEditablePreview(items, isOcr) {
+  importedWords = items;
+  const hint = document.getElementById('import-preview-hint');
+  hint.textContent = isOcr
+    ? 'REVIEW & CORRECT OCR RESULTS — TAP ANY FIELD TO EDIT'
+    : 'FOUND WORDS — TAP ANY FIELD TO EDIT, UNCHECK TO SKIP';
+
+  const list = document.getElementById('import-preview-list');
+  list.innerHTML = '';
+  items.forEach((w, i) => {
+    const row = document.createElement('div');
+    row.className = 'preview-row';
+    row.innerHTML = `
+      <input type="checkbox" id="imp-${i}" checked/>
+      <input type="text" class="preview-input hanzi-input" id="imp-hanzi-${i}" value="${(w.hanzi || '').replace(/"/g, '&quot;')}" placeholder="汉字"/>
+      <input type="text" class="preview-input pinyin-input" id="imp-pinyin-${i}" value="${(w.pinyin || '').replace(/"/g, '&quot;')}" placeholder="pinyin"/>
+      <input type="text" class="preview-input def-input" id="imp-def-${i}" value="${(w.english || '').replace(/"/g, '&quot;')}" placeholder="definition"/>`;
+    list.appendChild(row);
+  });
+  document.getElementById('import-preview').style.display = 'block';
+}
+
 function confirmImport() {
-  const checkboxes = document.querySelectorAll('#import-preview-list input[type=checkbox]');
   const existing = new Set(VOCAB.map(v => v.hanzi));
-  let added = 0;
+  let added = 0, skipped = 0;
 
   importedWords.forEach((w, i) => {
-    if (!checkboxes[i] || !checkboxes[i].checked) return;
-    if (existing.has(w.hanzi)) return;
-    VOCAB.push(w);
-    existing.add(w.hanzi);
+    const checkbox = document.getElementById(`imp-${i}`);
+    if (!checkbox || !checkbox.checked) return;
+
+    const hanziInput = document.getElementById(`imp-hanzi-${i}`);
+    const pinyinInput = document.getElementById(`imp-pinyin-${i}`);
+    const defInput = document.getElementById(`imp-def-${i}`);
+
+    const hanzi = (hanziInput ? hanziInput.value : w.hanzi || '').trim();
+    const pinyin = (pinyinInput ? pinyinInput.value : w.pinyin || '').trim();
+    const english = (defInput ? defInput.value : w.english || '').trim();
+
+    if (!hanzi || !pinyin || !english) { skipped++; return; }
+    if (existing.has(hanzi)) { skipped++; return; }
+
+    VOCAB.push({ hanzi, pinyin, english: cleanDefinition(correctSpelling(english)) });
+    existing.add(hanzi);
     added++;
   });
 
   if (added > 0) {
     document.getElementById('import-preview').style.display = 'none';
-    document.getElementById('import-status').innerHTML = `<span class="success">✓ ${added} UNIT${added !== 1 ? 'S' : ''} DEPLOYED</span>`;
+    document.getElementById('import-status').innerHTML = `<span class="success">✓ ${added} UNIT${added !== 1 ? 'S' : ''} DEPLOYED</span>` +
+      (skipped > 0 ? ` <span style="color:var(--hud-amber);">· ${skipped} skipped (missing fields or duplicate)</span>` : '');
     updateVocabCount();
     showToast(`⊕ ${added} UNIT${added !== 1 ? 'S' : ''} DEPLOYED TO DATABASE`);
   }
