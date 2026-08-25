@@ -2381,7 +2381,9 @@ function ocrWordsToRows(data) {
   }
 
   // ---- Step 3: For each line, split into Chinese / Pinyin / English by X position ----
-  const skipWords = new Set(['中文字', '中文', '拼音', '英文', '汉字', 'chinese', 'pinyin', 'pinying', 'english', '名字', '姓名']);
+  // Note: words like 姓名/名字 are NOT skipped — they can be real vocabulary.
+  // Actual name-header lines ("名字: Theo") are caught by the colon pattern below.
+  const skipWords = new Set(['中文字', '中文', '拼音', '英文', '汉字', 'chinese', 'pinyin', 'pinying', 'english']);
   const rows = [];
 
   lineGroups.forEach(line => {
@@ -2662,18 +2664,25 @@ async function handleImportFile(file) {
       const existing = new Set(VOCAB.map(v => v.hanzi));
       const cleaned = [];
       const seen = new Set();
+      const alreadyInDb = [];
       rows.forEach(r => {
-        if (!r.hanzi || seen.has(r.hanzi) || existing.has(r.hanzi)) return;
+        if (!r.hanzi || seen.has(r.hanzi)) return;
         seen.add(r.hanzi);
+        if (existing.has(r.hanzi)) { alreadyInDb.push(r.hanzi); return; }
         cleaned.push(validateVocabFields(r));
       });
 
       if (cleaned.length === 0) {
-        status.innerHTML = '<span style="color:var(--hud-amber);">ALL DETECTED WORDS ALREADY IN DATABASE</span>';
+        status.innerHTML = `<span style="color:var(--hud-amber);">ALL ${alreadyInDb.length} DETECTED WORDS ALREADY IN DATABASE:</span><br><span style="color:rgba(200,204,216,0.5);font-size:0.85rem;">${alreadyInDb.join('、')}</span>`;
         return;
       }
 
-      status.innerHTML = `<span class="success">${cleaned.length} WORD${cleaned.length !== 1 ? 'S' : ''} DETECTED</span> <span style="color:rgba(200,204,216,0.4);font-size:0.75rem;">— OCR on handwriting isn't perfect, review &amp; edit below before deploying</span>`;
+      let statusMsg = `<span class="success">${cleaned.length} NEW WORD${cleaned.length !== 1 ? 'S' : ''} DETECTED</span>`;
+      if (alreadyInDb.length > 0) {
+        statusMsg += ` <span style="color:var(--hud-amber);">· ${alreadyInDb.length} already in database (${alreadyInDb.join('、')})</span>`;
+      }
+      statusMsg += ` <span style="color:rgba(200,204,216,0.4);font-size:0.75rem;">— review &amp; edit below before deploying</span>`;
+      status.innerHTML = statusMsg;
       showEditablePreview(cleaned, true);
     } catch (err) {
       progWrap.style.display = 'none';
